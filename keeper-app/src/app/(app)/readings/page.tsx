@@ -28,6 +28,7 @@ export default async function ReadingsPage({
   const initialWaterOld = reading?.waterOld ?? mostRecent?.waterNew ?? 0;
   const initialWaterNew = reading?.waterNew ?? initialWaterOld;
   const waterUnitPrice = reading ? Number(reading.waterUnitPrice) : Number(activeConfig?.defaultWaterPrice ?? 0);
+  const initialUseTiers = reading?.useTiers ?? mostRecent?.useTiers ?? activeConfig?.useTiers ?? true;
 
   return (
     <div>
@@ -48,6 +49,7 @@ export default async function ReadingsPage({
         initialWaterOld={initialWaterOld}
         initialWaterNew={initialWaterNew}
         waterUnitPrice={waterUnitPrice}
+        initialUseTiers={initialUseTiers}
       />
     </div>
   );

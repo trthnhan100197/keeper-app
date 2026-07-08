@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getRoomOptions, getReadingForRoomPeriod, getActiveBillingConfig } from "@/lib/data";
 import { currentPeriod, vnd } from "@/lib/nav";
 import { calculateElectricityBill, calculateWaterBill } from "@/lib/billing";
-import { TieredToggle } from "@/components/tiered-toggle";
 import { RoomSelect } from "@/components/room-select";
 import { InvoiceActions } from "@/components/invoice-actions";
 
@@ -112,14 +111,14 @@ function InvoiceBody({
   room: { id: string; no: string; tenantName: string | null; tenantPhone: string | null };
   propertyName: string;
   activeMonthText: string;
-  reading: { electricOld: number; electricNew: number; waterOld: number; waterNew: number };
+  reading: { electricOld: number; electricNew: number; waterOld: number; waterNew: number; useTiers: boolean };
   config: NonNullable<Awaited<ReturnType<typeof getActiveBillingConfig>>>;
 }) {
   const elecConsumption = Math.max(0, reading.electricNew - reading.electricOld);
   const waterConsumption = Math.max(0, reading.waterNew - reading.waterOld);
 
   const elecResult = calculateElectricityBill(elecConsumption, {
-    useTiers: config.useTiers,
+    useTiers: reading.useTiers,
     flatUnitPrice: config.flatUnitPrice != null ? Number(config.flatUnitPrice) : null,
     vatPercent: Number(config.vatPercent),
     tiers: config.tiers.map((t) => ({
@@ -154,11 +153,24 @@ function InvoiceBody({
         <div style={{ font: "600 12px ui-monospace,monospace", color: "var(--sub)" }}>{activeMonthText}</div>
       </div>
 
-      <div className="print:hidden">
-        <TieredToggle configId={config.id} useTiers={config.useTiers} />
+      <div
+        className="print:hidden"
+        style={{
+          padding: "12px 14px",
+          border: "1px solid var(--border)",
+          borderRadius: 10,
+          marginBottom: 14,
+        }}
+      >
+        <div style={{ font: "600 12.5px -apple-system,sans-serif" }}>Tính theo bậc thang nhà nước</div>
+        <div style={{ font: "400 11px -apple-system,sans-serif", color: "var(--sub)", marginTop: 2 }}>
+          {reading.useTiers
+            ? "Có áp dụng — tính theo biểu giá bậc thang EVN (chốt lúc nhập chỉ số)"
+            : "Không áp dụng — dùng đơn giá cố định (chốt lúc nhập chỉ số)"}
+        </div>
       </div>
 
-      {config.useTiers ? (
+      {reading.useTiers ? (
         <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 14 }}>
           <div
             style={{

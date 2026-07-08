@@ -83,6 +83,7 @@ export async function saveReading(input: {
   waterOld: number;
   waterNew: number;
   waterUnitPrice: number;
+  useTiers: boolean;
 }) {
   const activeConfig = await prisma.billingConfig.findFirst({ where: { isActive: true } });
   await prisma.meterReading.upsert({
@@ -94,17 +95,12 @@ export async function saveReading(input: {
       waterOld: input.waterOld,
       waterNew: input.waterNew,
       waterUnitPrice: input.waterUnitPrice,
+      useTiers: input.useTiers,
     },
   });
   revalidatePath("/readings");
   revalidatePath("/invoice");
   revalidatePath("/dashboard");
-}
-
-export async function toggleUseTiers(configId: string, useTiers: boolean) {
-  await prisma.billingConfig.update({ where: { id: configId }, data: { useTiers } });
-  revalidatePath("/invoice");
-  revalidatePath("/config");
 }
 
 export async function saveConfig(input: {
