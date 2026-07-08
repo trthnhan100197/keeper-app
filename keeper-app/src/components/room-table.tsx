@@ -1,26 +1,52 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { RoomStatus } from "@prisma/client";
-import { updatePropertyName, updateRoom, addRoom, deleteRoom } from "@/app/(app)/actions";
+import { updateProperty, updateRoom, addRoom, deleteRoom, deleteProperty } from "@/app/(app)/actions";
 
 type Room = { id: string; name: string; monthlyRent: number; status: RoomStatus };
+
+const propertyFieldInputStyle: React.CSSProperties = {
+  flex: 1,
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  padding: "9px 12px",
+  font: "600 13px -apple-system,sans-serif",
+  background: "var(--bg)",
+  color: "var(--text)",
+};
 
 export function RoomTable({
   propertyId,
   propertyName,
+  propertyAddress,
   rooms,
 }: {
   propertyId: string;
   propertyName: string;
+  propertyAddress: string;
   rooms: Room[];
 }) {
+  const router = useRouter();
   const [name, setName] = useState(propertyName);
+  const [address, setAddress] = useState(propertyAddress);
   const [, startTransition] = useTransition();
+
+  function onDeleteProperty() {
+    const confirmed = window.confirm(
+      `Xoá cơ sở "${propertyName}"? Toàn bộ ${rooms.length} phòng, chỉ số và hóa đơn liên quan sẽ bị xoá vĩnh viễn. Không thể hoàn tác.`
+    );
+    if (!confirmed) return;
+    startTransition(async () => {
+      await deleteProperty(propertyId);
+      router.push("/rooms");
+    });
+  }
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
         <div style={{ font: "500 12px -apple-system,sans-serif", color: "var(--sub)", whiteSpace: "nowrap" }}>
           Tên cơ sở
         </div>
@@ -28,17 +54,36 @@ export function RoomTable({
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          onBlur={() => name !== propertyName && startTransition(() => updatePropertyName(propertyId, name))}
-          style={{
-            flex: 1,
-            border: "1px solid var(--border)",
-            borderRadius: 8,
-            padding: "9px 12px",
-            font: "600 13px -apple-system,sans-serif",
-            background: "var(--bg)",
-            color: "var(--text)",
-          }}
+          onBlur={() => name !== propertyName && startTransition(() => updateProperty(propertyId, { name }))}
+          style={propertyFieldInputStyle}
         />
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <div style={{ font: "500 12px -apple-system,sans-serif", color: "var(--sub)", whiteSpace: "nowrap" }}>
+          Địa chỉ
+        </div>
+        <input
+          type="text"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+          onBlur={() => address !== propertyAddress && startTransition(() => updateProperty(propertyId, { address }))}
+          style={propertyFieldInputStyle}
+        />
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+        <div
+          onClick={onDeleteProperty}
+          style={{
+            padding: "7px 14px",
+            borderRadius: 8,
+            border: "1px solid var(--border)",
+            font: "500 12px -apple-system,sans-serif",
+            color: "var(--sub)",
+            cursor: "pointer",
+          }}
+        >
+          Xoá cơ sở
+        </div>
       </div>
       <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
         <div

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPropertiesWithRooms } from "@/lib/data";
 import { RoomTable } from "@/components/room-table";
+import { AddPropertyButton } from "@/components/add-property-button";
 
 export default async function RoomsPage({
   searchParams,
@@ -61,10 +62,13 @@ export default async function RoomsPage({
             </Link>
           );
         })}
+        <AddPropertyButton />
       </div>
       <RoomTable
+        key={current.id}
         propertyId={current.id}
         propertyName={current.name}
+        propertyAddress={current.address}
         rooms={current.rooms.map((r) => ({ id: r.id, name: r.name, monthlyRent: Number(r.monthlyRent), status: r.status }))}
       />
     </div>

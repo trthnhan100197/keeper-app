@@ -4,10 +4,27 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { RoomStatus } from "@prisma/client";
 
-export async function updatePropertyName(propertyId: string, name: string) {
-  await prisma.property.update({ where: { id: propertyId }, data: { name } });
+export async function updateProperty(propertyId: string, data: { name?: string; address?: string }) {
+  await prisma.property.update({ where: { id: propertyId }, data });
   revalidatePath("/rooms");
   revalidatePath("/dashboard");
+}
+
+export async function addProperty() {
+  const property = await prisma.property.create({
+    data: { name: "Cơ sở mới", address: "" },
+  });
+  revalidatePath("/rooms");
+  revalidatePath("/dashboard");
+  return property.id;
+}
+
+export async function deleteProperty(propertyId: string) {
+  await prisma.property.delete({ where: { id: propertyId } });
+  revalidatePath("/rooms");
+  revalidatePath("/dashboard");
+  revalidatePath("/readings");
+  revalidatePath("/invoice");
 }
 
 export async function updateRoom(
