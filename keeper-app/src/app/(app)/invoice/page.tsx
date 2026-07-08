@@ -1,49 +1,120 @@
+import Link from "next/link";
 import { getRoomOptions, getReadingForRoomPeriod, getActiveBillingConfig } from "@/lib/data";
 import { currentPeriod, vnd } from "@/lib/nav";
 import { calculateElectricityBill, calculateWaterBill } from "@/lib/billing";
 import { TieredToggle } from "@/components/tiered-toggle";
+import { RoomSelect } from "@/components/room-select";
+import { InvoiceActions } from "@/components/invoice-actions";
 
 export default async function InvoicePage({
   searchParams,
 }: {
-  searchParams: Promise<{ room?: string; month?: string; year?: string }>;
+  searchParams: Promise<{ property?: string; room?: string; month?: string; year?: string }>;
 }) {
   const sp = await searchParams;
   const { month, year, text: activeMonthText } = currentPeriod(sp);
   const options = await getRoomOptions();
-  const currentRoomId = sp.room && options.some((o) => o.id === sp.room) ? sp.room : options[0]?.id;
-  const currentRoom = options.find((o) => o.id === currentRoomId);
 
-  if (!currentRoomId || !currentRoom) {
+  if (options.length === 0) {
     return <div style={{ font: "500 13px -apple-system,sans-serif", color: "var(--sub)" }}>Chưa có phòng nào.</div>;
   }
+
+  const propertyList = Array.from(new Map(options.map((o) => [o.propertyId, o.propertyName])).entries()).map(
+    ([id, name]) => ({ id, name })
+  );
+  const currentPropertyId = propertyList.some((p) => p.id === sp.property) ? (sp.property as string) : propertyList[0].id;
+  const roomsInProperty = options.filter((o) => o.propertyId === currentPropertyId);
+  const currentRoomId = roomsInProperty.some((o) => o.id === sp.room) ? (sp.room as string) : roomsInProperty[0].id;
+  const currentRoom = roomsInProperty.find((o) => o.id === currentRoomId)!;
+
+  const qs = new URLSearchParams();
+  if (sp.month) qs.set("month", sp.month);
+  if (sp.year) qs.set("year", sp.year);
 
   const [reading, config] = await Promise.all([
     getReadingForRoomPeriod(currentRoomId, month, year),
     getActiveBillingConfig(),
   ]);
 
-  if (!config) {
-    return (
-      <div style={{ font: "500 13px -apple-system,sans-serif", color: "var(--sub)" }}>
-        Chưa có cấu hình giá điện nước. Vào màn Cấu hình để thiết lập.
+  return (
+    <div>
+      <div className="print:hidden" style={{ display: "flex", gap: 8, margin: "0 0 14px" }}>
+        {propertyList.map((p) => {
+          const active = p.id === currentPropertyId;
+          const params = new URLSearchParams(qs);
+          params.set("property", p.id);
+          return (
+            <Link
+              key={p.id}
+              href={`/invoice?${params.toString()}`}
+              style={
+                active
+                  ? {
+                      padding: "7px 14px",
+                      borderRadius: 8,
+                      background: "var(--accent)",
+                      color: "var(--accent-c)",
+                      font: "600 12px -apple-system,sans-serif",
+                      cursor: "pointer",
+                    }
+                  : {
+                      padding: "7px 14px",
+                      borderRadius: 8,
+                      border: "1px solid var(--border)",
+                      font: "500 12px -apple-system,sans-serif",
+                      color: "var(--sub)",
+                      cursor: "pointer",
+                    }
+              }
+            >
+              {p.name}
+            </Link>
+          );
+        })}
       </div>
-    );
-  }
+      <div className="print:hidden" style={{ marginBottom: 14 }}>
+        <RoomSelect options={roomsInProperty} current={currentRoomId} />
+      </div>
 
-  if (!reading) {
-    return (
-      <div>
-        <div style={{ font: "700 20px/1.2 -apple-system,sans-serif", marginBottom: 6 }}>
-          Hóa đơn — {currentRoom.no}
-        </div>
+      {!config ? (
         <div style={{ font: "500 13px -apple-system,sans-serif", color: "var(--sub)" }}>
-          Chưa có chỉ số điện nước cho {activeMonthText}. Vào màn Chỉ số để nhập trước.
+          Chưa có cấu hình giá điện nước. Vào màn Cấu hình để thiết lập.
         </div>
-      </div>
-    );
-  }
+      ) : !reading ? (
+        <div>
+          <div style={{ font: "700 20px/1.2 -apple-system,sans-serif", marginBottom: 6 }}>
+            Hóa đơn — {currentRoom.no}
+          </div>
+          <div style={{ font: "500 13px -apple-system,sans-serif", color: "var(--sub)" }}>
+            Chưa có chỉ số điện nước cho {activeMonthText}. Vào màn Chỉ số để nhập trước.
+          </div>
+        </div>
+      ) : (
+        <InvoiceBody
+          room={currentRoom}
+          propertyName={propertyList.find((p) => p.id === currentPropertyId)!.name}
+          activeMonthText={activeMonthText}
+          reading={reading}
+          config={config}
+        />
+      )}
+    </div>
+  );
+}
 
+function InvoiceBody({
+  room,
+  propertyName,
+  activeMonthText,
+  reading,
+  config,
+}: {
+  room: { id: string; no: string; tenantName: string | null; tenantPhone: string | null };
+  propertyName: string;
+  activeMonthText: string;
+  reading: { electricOld: number; electricNew: number; waterOld: number; waterNew: number };
+  config: NonNullable<Awaited<ReturnType<typeof getActiveBillingConfig>>>;
+}) {
   const elecConsumption = Math.max(0, reading.electricNew - reading.electricOld);
   const waterConsumption = Math.max(0, reading.waterNew - reading.waterOld);
 
@@ -64,6 +135,11 @@ export default async function InvoicePage({
 
   return (
     <div>
+      <div className="hidden print:block" style={{ marginBottom: 14 }}>
+        <div style={{ font: "700 16px -apple-system,sans-serif" }}>{propertyName}</div>
+        {room.tenantName && <div style={{ font: "500 12px -apple-system,sans-serif", marginTop: 2 }}>Người thuê: {room.tenantName}</div>}
+      </div>
+
       <div
         style={{
           display: "flex",
@@ -74,11 +150,13 @@ export default async function InvoicePage({
           gap: 8,
         }}
       >
-        <div style={{ font: "700 20px/1.2 -apple-system,sans-serif" }}>Hóa đơn — {currentRoom.no}</div>
+        <div style={{ font: "700 20px/1.2 -apple-system,sans-serif" }}>Hóa đơn — {room.no}</div>
         <div style={{ font: "600 12px ui-monospace,monospace", color: "var(--sub)" }}>{activeMonthText}</div>
       </div>
 
-      <TieredToggle configId={config.id} useTiers={config.useTiers} />
+      <div className="print:hidden">
+        <TieredToggle configId={config.id} useTiers={config.useTiers} />
+      </div>
 
       {config.useTiers ? (
         <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 14 }}>
@@ -165,6 +243,16 @@ export default async function InvoicePage({
         <div style={{ font: "600 13px -apple-system,sans-serif" }}>Tổng cộng</div>
         <div style={{ font: "700 18px ui-monospace,monospace" }}>{vnd(grandTotal)}</div>
       </div>
+
+      <InvoiceActions
+        roomNo={room.no}
+        propertyName={propertyName}
+        activeMonthText={activeMonthText}
+        tenantPhone={room.tenantPhone}
+        elecConsumption={elecConsumption}
+        waterConsumption={waterConsumption}
+        grandTotalText={vnd(grandTotal)}
+      />
     </div>
   );
 }

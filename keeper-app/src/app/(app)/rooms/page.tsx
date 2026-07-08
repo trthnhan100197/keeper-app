@@ -69,7 +69,14 @@ export default async function RoomsPage({
         propertyId={current.id}
         propertyName={current.name}
         propertyAddress={current.address}
-        rooms={current.rooms.map((r) => ({ id: r.id, name: r.name, monthlyRent: Number(r.monthlyRent), status: r.status }))}
+        rooms={current.rooms.map((r) => ({
+          id: r.id,
+          name: r.name,
+          monthlyRent: Number(r.monthlyRent),
+          status: r.status,
+          tenantName: r.tenants[0]?.name ?? "",
+          tenantPhone: r.tenants[0]?.phone ?? "",
+        }))}
       />
     </div>
   );

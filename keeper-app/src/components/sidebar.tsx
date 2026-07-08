@@ -13,7 +13,7 @@ export function Sidebar() {
 
   return (
     <div
-      className="hidden min-[760px]:flex"
+      className="hidden min-[760px]:flex print:hidden"
       style={{
         width: 190,
         flex: "none",

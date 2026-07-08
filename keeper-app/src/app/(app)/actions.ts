@@ -63,6 +63,17 @@ export async function deleteRoom(roomId: string) {
   revalidatePath("/invoice");
 }
 
+export async function upsertTenant(roomId: string, data: { name: string; phone: string }) {
+  const existing = await prisma.tenant.findFirst({ where: { roomId, active: true } });
+  if (existing) {
+    await prisma.tenant.update({ where: { id: existing.id }, data: { name: data.name, phone: data.phone } });
+  } else {
+    await prisma.tenant.create({ data: { roomId, name: data.name, phone: data.phone, active: true } });
+  }
+  revalidatePath("/rooms");
+  revalidatePath("/invoice");
+}
+
 export async function saveReading(input: {
   roomId: string;
   month: number;

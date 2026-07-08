@@ -8,7 +8,7 @@ import { PeriodSelect } from "./period-select";
 
 export function MobileTopBar() {
   return (
-    <div className="min-[760px]:hidden">
+    <div className="min-[760px]:hidden print:hidden">
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <div style={{ font: "700 17px -apple-system,sans-serif" }}>Keeper</div>
         <ThemeToggle />
@@ -27,7 +27,7 @@ export function MobileBottomNav() {
 
   return (
     <div
-      className="flex min-[760px]:hidden"
+      className="flex min-[760px]:hidden print:hidden"
       style={{
         position: "fixed",
         left: 0,

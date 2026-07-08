@@ -2,7 +2,12 @@ import { prisma } from "./prisma";
 
 export async function getPropertiesWithRooms() {
   return prisma.property.findMany({
-    include: { rooms: true },
+    include: {
+      rooms: {
+        include: { tenants: { where: { active: true }, take: 1 } },
+        orderBy: { createdAt: "asc" },
+      },
+    },
     orderBy: { createdAt: "asc" },
   });
 }
@@ -13,7 +18,16 @@ export async function getReadingsForPeriod(month: number, year: number) {
 
 export async function getRoomOptions() {
   const properties = await getPropertiesWithRooms();
-  return properties.flatMap((p) => p.rooms.map((r) => ({ id: r.id, no: r.name, propertyName: p.name })));
+  return properties.flatMap((p) =>
+    p.rooms.map((r) => ({
+      id: r.id,
+      no: r.name,
+      propertyId: p.id,
+      propertyName: p.name,
+      tenantName: r.tenants[0]?.name ?? null,
+      tenantPhone: r.tenants[0]?.phone ?? null,
+    }))
+  );
 }
 
 export async function getReadingForRoomPeriod(roomId: string, month: number, year: number) {
