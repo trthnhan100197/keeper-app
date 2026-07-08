@@ -108,7 +108,7 @@ function InvoiceBody({
   reading,
   config,
 }: {
-  room: { id: string; no: string; tenantName: string | null; tenantPhone: string | null };
+  room: { id: string; no: string; monthlyRent: number; tenantName: string | null; tenantPhone: string | null };
   propertyName: string;
   activeMonthText: string;
   reading: { electricOld: number; electricNew: number; waterOld: number; waterNew: number; useTiers: boolean };
@@ -262,9 +262,13 @@ function InvoiceBody({
         propertyName={propertyName}
         activeMonthText={activeMonthText}
         tenantPhone={room.tenantPhone}
-        elecConsumption={elecConsumption}
-        waterConsumption={waterConsumption}
-        grandTotalText={vnd(grandTotal)}
+        electricOld={reading.electricOld}
+        electricNew={reading.electricNew}
+        waterOld={reading.waterOld}
+        waterNew={reading.waterNew}
+        elecWaterTotalText={vnd(grandTotal)}
+        monthlyRent={room.monthlyRent}
+        grandTotalText={vnd(grandTotal + room.monthlyRent)}
       />
     </div>
   );

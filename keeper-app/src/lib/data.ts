@@ -24,6 +24,7 @@ export async function getRoomOptions() {
       no: r.name,
       propertyId: p.id,
       propertyName: p.name,
+      monthlyRent: Number(r.monthlyRent),
       tenantName: r.tenants[0]?.name ?? null,
       tenantPhone: r.tenants[0]?.phone ?? null,
     }))
