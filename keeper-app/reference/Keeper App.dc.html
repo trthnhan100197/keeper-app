@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<style>
+body{margin:0}
+*{box-sizing:border-box}
+</style>
+</helmet>
+
+<div style="{{ rootStyle }}">
+
+  <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+  <div style="width:190px;flex:none;border-right:1px solid var(--border);padding:24px 16px;display:flex;flex-direction:column;gap:3px">
+    <div style="font:700 17px/1 -apple-system,sans-serif;letter-spacing:-0.02em;margin-bottom:26px;display:flex;align-items:center;justify-content:space-between">
+      Keeper
+      <div onClick="{{ toggleTheme }}" style="{{ themeBtnStyle }}">{{ themeBtnLabel }}</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:20px">
+      <select onChange="{{ onMonthChange }}" value="{{ activeMonth }}" style="flex:1;padding:7px 8px;border:1px solid var(--border);border-radius:7px;font:600 11.5px -apple-system,sans-serif;background:var(--bg);color:var(--text)">
+        <sc-for list="{{ monthOptions }}" as="m" hint-placeholder-count="12">
+        <option value="{{ m.value }}">{{ m.label }}</option>
+        </sc-for>
+      </select>
+      <select onChange="{{ onYearChange }}" value="{{ activeYear }}" style="width:70px;padding:7px 8px;border:1px solid var(--border);border-radius:7px;font:600 11.5px -apple-system,sans-serif;background:var(--bg);color:var(--text)">
+        <sc-for list="{{ yearOptions }}" as="y" hint-placeholder-count="5">
+        <option value="{{ y.value }}">{{ y.label }}</option>
+        </sc-for>
+      </select>
+    </div>
+    <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="5">
+      <div onClick="{{ item.onClick }}" style="{{ item.style }}">{{ item.label }}</div>
+    </sc-for>
+  </div>
+  </sc-if>
+
+  <div style="flex:1;min-width:0;padding:{{ contentPadding }};padding-bottom:{{ contentBottomPad }};overflow-y:auto">
+
+    <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+    <div></div>
+    </sc-if>
+    <sc-if value="{{ isMobileTop }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font:700 17px -apple-system,sans-serif">Keeper</div>
+      <div onClick="{{ toggleTheme }}" style="{{ themeBtnStyle }}">{{ themeBtnLabel }}</div>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:18px">
+      <select onChange="{{ onMonthChange }}" value="{{ activeMonth }}" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:600 12px -apple-system,sans-serif;background:var(--bg);color:var(--text)">
+        <sc-for list="{{ monthOptions }}" as="m" hint-placeholder-count="12">
+        <option value="{{ m.value }}">{{ m.label }}</option>
+        </sc-for>
+      </select>
+      <select onChange="{{ onYearChange }}" value="{{ activeYear }}" style="width:84px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:600 12px -apple-system,sans-serif;background:var(--bg);color:var(--text)">
+        <sc-for list="{{ yearOptions }}" as="y" hint-placeholder-count="5">
+        <option value="{{ y.value }}">{{ y.label }}</option>
+        </sc-for>
+      </select>
+    </div>
+    </sc-if>
+
+    <!-- DASHBOARD -->
+    <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+    <div>
+      <div style="font:700 20px/1.2 -apple-system,sans-serif;margin-bottom:4px">Tổng quan</div>
+      <div style="font:400 13px -apple-system,sans-serif;color:var(--sub);margin-bottom:16px">{{ activeMonthText }}</div>
+
+      <sc-if value="{{ hasMissing }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:flex-start;gap:10px;border:1px dashed var(--sub);border-radius:10px;padding:12px 14px;margin-bottom:18px">
+        <div style="width:18px;height:18px;border-radius:50%;background:var(--accent);color:var(--accent-c);flex:none;display:flex;align-items:center;justify-content:center;font:700 11px ui-monospace,monospace">!</div>
+        <div>
+          <div style="font:600 13px -apple-system,sans-serif">{{ missingCount }} phòng chưa nhập chỉ số tháng này</div>
+          <div style="font:500 11.5px -apple-system,sans-serif;color:var(--sub);margin-top:3px">{{ missingListText }}</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <div style="display:grid;grid-template-columns:{{ statGridCols }};gap:12px;margin-bottom:24px">
+        <div style="padding:16px;border:1px solid var(--border);border-radius:10px">
+          <div style="font:500 11px -apple-system,sans-serif;color:var(--sub)">Tổng số phòng</div>
+          <div style="font:700 22px/1.3 ui-monospace,monospace;margin-top:4px">{{ totalRooms }}</div>
+        </div>
+        <div style="padding:16px;border:1px solid var(--border);border-radius:10px">
+          <div style="font:500 11px -apple-system,sans-serif;color:var(--sub)">Đang thuê</div>
+          <div style="font:700 22px/1.3 ui-monospace,monospace;margin-top:4px">{{ occupiedRooms }}</div>
+        </div>
+        <div style="padding:16px;border:1px solid var(--border);border-radius:10px">
+          <div style="font:500 11px -apple-system,sans-serif;color:var(--sub)">Phòng trống</div>
+          <div style="font:700 22px/1.3 ui-monospace,monospace;margin-top:4px">{{ vacantRooms }}</div>
+        </div>
+        <div style="padding:16px;border:1px solid var(--border);border-radius:10px">
+          <div style="font:500 11px -apple-system,sans-serif;color:var(--sub)">Doanh thu tháng</div>
+          <div style="font:700 18px/1.3 ui-monospace,monospace;margin-top:4px">{{ revenueText }}</div>
+        </div>
+      </div>
+
+      <div style="font:600 12.5px -apple-system,sans-serif;color:var(--sub);margin-bottom:10px">Trụ sở / Nhà</div>
+      <div style="display:grid;grid-template-columns:{{ buildingGridCols }};gap:12px">
+        <sc-for list="{{ buildingCards }}" as="b" hint-placeholder-count="3">
+        <div style="border:1px solid var(--border);border-radius:10px;padding:14px;position:relative">
+          <sc-if value="{{ b.missing }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:12px;right:12px;width:16px;height:16px;border-radius:50%;background:var(--accent);color:var(--accent-c);display:flex;align-items:center;justify-content:center;font:700 10px ui-monospace,monospace">!</div>
+          </sc-if>
+          <div style="font:600 13.5px -apple-system,sans-serif">{{ b.name }}</div>
+          <div style="font:400 11.5px -apple-system,sans-serif;color:var(--sub);margin:3px 0 10px">{{ b.roomCount }} phòng</div>
+          <div style="font:600 12px ui-monospace,monospace">{{ b.occupiedText }}</div>
+          <sc-if value="{{ b.missing }}" hint-placeholder-val="{{ false }}">
+          <div style="font:500 11px -apple-system,sans-serif;color:var(--sub);margin-top:4px">{{ b.missingText }}</div>
+          </sc-if>
+        </div>
+        </sc-for>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ROOMS -->
+    <sc-if value="{{ isRooms }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font:700 20px/1.2 -apple-system,sans-serif">Phòng</div>
+        <div style="font:600 12.5px ui-monospace,monospace;color:var(--sub)">{{ currentBuildingSummary }}</div>
+      </div>
+      <div style="display:flex;gap:8px;margin:14px 0 14px">
+        <sc-for list="{{ buildingTabs }}" as="t" hint-placeholder-count="3">
+        <div onClick="{{ t.onClick }}" style="{{ t.style }}">{{ t.label }}</div>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="font:500 12px -apple-system,sans-serif;color:var(--sub);white-space:nowrap">Tên cơ sở</div>
+        <input type="text" value="{{ currentBuildingName }}" onChange="{{ onCurrentBuildingNameChange }}" style="flex:1;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font:600 13px -apple-system,sans-serif;background:var(--bg);color:var(--text)">
+      </div>
+      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;background:var(--surface);font:600 11px -apple-system,sans-serif;color:var(--sub)">
+          <div style="flex:1">Tên phòng</div><div style="flex:1">Giá thuê</div><div style="width:130px">Trạng thái</div><div style="width:28px"></div>
+        </div>
+        <sc-for list="{{ currentRooms }}" as="r" hint-placeholder-count="6">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--border)">
+          <div style="flex:1"><input type="text" value="{{ r.no }}" onChange="{{ r.onNoChange }}" style="width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 10px;font:700 13px -apple-system,sans-serif;background:var(--bg);color:var(--text)"></div>
+          <div style="flex:1"><input type="number" value="{{ r.price }}" onChange="{{ r.onPriceChange }}" style="width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 10px;font:600 12.5px ui-monospace,monospace;background:var(--bg);color:var(--text)"></div>
+          <div style="width:130px">
+            <select onChange="{{ r.onStatusChange }}" value="{{ r.status }}" style="width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 8px;font:600 11px -apple-system,sans-serif;background:var(--bg);color:var(--text)">
+              <option value="occupied">Đang thuê</option>
+              <option value="vacant">Trống</option>
+            </select>
+          </div>
+          <div onClick="{{ r.onDelete }}" style="width:28px;height:28px;flex:none;border-radius:7px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--sub);font:600 15px -apple-system,sans-serif">×</div>
+        </div>
+        </sc-for>
+      </div>
+      <div style="margin-top:14px">
+        <div onClick="{{ onAddRoom }}" style="display:inline-block;padding:9px 16px;border-radius:8px;border:1px dashed var(--sub);font:500 12px -apple-system,sans-serif;color:var(--sub);cursor:pointer">+ Thêm phòng</div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- READINGS -->
+    <sc-if value="{{ isReadings }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="font:700 20px/1.2 -apple-system,sans-serif;margin-bottom:14px">Nhập chỉ số</div>
+      <div style="display:flex;gap:8px;margin-bottom:20px">
+        <select onChange="{{ onRoomChange }}" value="{{ selectedRoom }}" style="padding:9px 14px;border:1px solid var(--border);border-radius:8px;font:600 12.5px -apple-system,sans-serif;background:var(--bg);color:var(--text)">
+          <sc-for list="{{ allRoomOptions }}" as="o" hint-placeholder-count="18">
+          <option value="{{ o.no }}">{{ o.label }}</option>
+          </sc-for>
+        </select>
+        <div style="padding:9px 14px;border:1px solid var(--border);border-radius:8px;font:600 12.5px -apple-system,sans-serif;color:var(--sub)">{{ activeMonthText }}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:{{ readingsGridCols }};gap:20px">
+        <div style="border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="font:600 12.5px -apple-system,sans-serif;margin-bottom:12px">Điện (kWh)</div>
+          <div style="display:flex;gap:10px;margin-bottom:12px">
+            <div style="flex:1">
+              <div style="font:500 11px -apple-system,sans-serif;color:var(--sub);margin-bottom:6px">Số cũ</div>
+              <input type="number" value="{{ oldElec }}" onChange="{{ onOldElec }}" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font:600 14px ui-monospace,monospace;background:var(--bg);color:var(--text)">
+            </div>
+            <div style="flex:1">
+              <div style="font:500 11px -apple-system,sans-serif;color:var(--sub);margin-bottom:6px">Số mới</div>
+              <input type="number" value="{{ newElec }}" onChange="{{ onNewElec }}" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font:600 14px ui-monospace,monospace;background:var(--bg);color:var(--text)">
+            </div>
+          </div>
+          <div style="background:var(--surface);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font:500 11.5px -apple-system,sans-serif;color:var(--sub)">Tiêu thụ</span>
+            <span style="font:700 15px ui-monospace,monospace">{{ elecConsumptionText }}</span>
+          </div>
+        </div>
+        <div style="border:1px solid var(--border);border-radius:10px;padding:16px">
+          <div style="font:600 12.5px -apple-system,sans-serif;margin-bottom:12px">Nước (m³)</div>
+          <div style="display:flex;gap:10px;margin-bottom:12px">
+            <div style="flex:1">
+              <div style="font:500 11px -apple-system,sans-serif;color:var(--sub);margin-bottom:6px">Số cũ</div>
+              <input type="number" value="{{ oldWater }}" onChange="{{ onOldWater }}" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font:600 14px ui-monospace,monospace;background:var(--bg);color:var(--text)">
+            </div>
+            <div style="flex:1">
+              <div style="font:500 11px -apple-system,sans-serif;color:var(--sub);margin-bottom:6px">Số mới</div>
+              <input type="number" value="{{ newWater }}" onChange="{{ onNewWater }}" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font:600 14px ui-monospace,monospace;background:var(--bg);color:var(--text)">
+            </div>
+          </div>
+          <div style="background:var(--surface);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">
+            <span style="font:500 11.5px -apple-system,sans-serif;color:var(--sub)">Tiêu thụ</span>
+            <span style="font:700 15px ui-monospace,monospace">{{ waterConsumptionText }}</span>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:20px;display:flex;justify-content:flex-end">
+        <div onClick="{{ onSaveReading }}" style="padding:11px 22px;border-radius:8px;background:var(--accent);color:var(--accent-c);font:600 13px -apple-system,sans-serif;cursor:pointer">{{ saveLabel }}</div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- INVOICE -->
+    <sc-if value="{{ isInvoice }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:8px">
+        <div style="font:700 20px/1.2 -apple-system,sans-serif">Hóa đơn — {{ selectedRoom }}</div>
+        <div style="font:600 12px ui-monospace,monospace;color:var(--sub)">{{ activeMonthText }}</div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--border);border-radius:10px;margin:14px 0 18px">
+        <div>
+          <div style="font:600 12.5px -apple-system,sans-serif">Tính theo bậc thang nhà nước</div>
+          <div style="font:400 11px -apple-system,sans-serif;color:var(--sub);margin-top:2px">{{ tieredStatusText }}</div>
+        </div>
+        <div onClick="{{ toggleTiered }}" style="{{ toggleTrackStyle }}">
+          <div style="{{ toggleThumbStyle }}"></div>
+        </div>
+      </div>
+
+      <sc-if value="{{ tieredOn }}" hint-placeholder-val="{{ true }}">
+      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px">
+        <div style="display:flex;padding:9px 14px;background:var(--surface);font:600 10.5px -apple-system,sans-serif;color:var(--sub)">
+          <div style="flex:1">Bậc</div><div style="width:100px">Sản lượng</div><div style="width:90px">Đơn giá</div><div style="width:110px;text-align:right">Thành tiền</div>
+        </div>
+        <sc-for list="{{ tierRows }}" as="row" hint-placeholder-count="3">
+        <div style="display:flex;align-items:center;padding:9px 14px;border-top:1px solid var(--border);font:500 12px -apple-system,sans-serif">
+          <div style="flex:1">Bậc {{ row.tier }}</div><div style="width:100px;font:600 12px ui-monospace,monospace">{{ row.usedText }}</div><div style="width:90px;font:600 12px ui-monospace,monospace">{{ row.priceText }}</div><div style="width:110px;text-align:right;font:600 12px ui-monospace,monospace">{{ row.costText }}</div>
+        </div>
+        </sc-for>
+        <div style="display:flex;align-items:center;padding:9px 14px;border-top:1px solid var(--border);font:700 12px -apple-system,sans-serif">
+          <div style="flex:1">Điện · {{ elecConsumptionText }}</div><div style="width:100px"></div><div style="width:90px"></div><div style="width:110px;text-align:right;font:700 12px ui-monospace,monospace">{{ elecTotalText }}</div>
+        </div>
+        <div style="display:flex;align-items:center;padding:9px 14px;border-top:1px solid var(--border);font:600 12px -apple-system,sans-serif">
+          <div style="flex:1">Nước · {{ waterConsumptionText }}</div><div style="width:100px"></div><div style="width:90px;font:600 12px ui-monospace,monospace">{{ waterPriceText }}</div><div style="width:110px;text-align:right;font:600 12px ui-monospace,monospace">{{ waterTotalText }}</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ tieredOff }}" hint-placeholder-val="{{ false }}">
+      <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:14px">
+        <div style="display:flex;padding:9px 14px;background:var(--surface);font:600 10.5px -apple-system,sans-serif;color:var(--sub)">
+          <div style="flex:1">Khoản mục</div><div style="width:120px">Sản lượng</div><div style="width:90px">Đơn giá</div><div style="width:110px;text-align:right">Thành tiền</div>
+        </div>
+        <div style="display:flex;align-items:center;padding:12px 14px;border-top:1px solid var(--border);font:600 12.5px -apple-system,sans-serif">
+          <div style="flex:1">Điện</div><div style="width:120px;font:600 12px ui-monospace,monospace">{{ elecConsumptionText }}</div><div style="width:90px;font:600 12px ui-monospace,monospace">{{ flatElecPriceText }}</div><div style="width:110px;text-align:right;font:700 12.5px ui-monospace,monospace">{{ elecTotalText }}</div>
+        </div>
+        <div style="display:flex;align-items:center;padding:12px 14px;border-top:1px solid var(--border);font:600 12.5px -apple-system,sans-serif">
+          <div style="flex:1">Nước</div><div style="width:120px;font:600 12px ui-monospace,monospace">{{ waterConsumptionText }}</div><div style="width:90px;font:600 12px ui-monospace,monospace">{{ waterPriceText }}</div><div style="width:110px;text-align:right;font:700 12.5px ui-monospace,monospace">{{ waterTotalText }}</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-radius:10px;background:var(--accent);color:var(--accent-c)">
+        <div style="font:600 13px -apple-system,sans-serif">Tổng cộng</div>
+        <div style="font:700 18px ui-monospace,monospace">{{ grandTotalText }}</div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- CONFIG -->
+    <sc-if value="{{ isConfig }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="font:700 20px/1.2 -apple-system,sans-serif;margin-bottom:2px">Cấu hình giá điện nước</div>
+      <div style="font:400 12px -apple-system,sans-serif;color:var(--sub);margin-bottom:16px">Áp dụng ngay cho chỉ số và hóa đơn</div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="font:500 12px -apple-system,sans-serif;color:var(--sub)">Áp dụng thay đổi giá cho</div>
+        <select onChange="{{ onApplyScopeChange }}" value="{{ applyScope }}" style="padding:7px 12px;border:1px solid var(--border);border-radius:8px;font:600 12px -apple-system,sans-serif;background:var(--bg);color:var(--text)">
+          <sc-for list="{{ applyScopeOptions }}" as="opt" hint-placeholder-count="2">
+          <option value="{{ opt.value }}">{{ opt.label }}</option>
+          </sc-for>
+        </select>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:18px">
+        <sc-for list="{{ configTabs }}" as="ctab" hint-placeholder-count="2">
+        <div onClick="{{ ctab.onClick }}" style="{{ ctab.style }}">{{ ctab.label }}</div>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ isConfigTiered }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="font:600 13px -apple-system,sans-serif;margin-bottom:2px">Bảng giá điện bậc thang</div>
+        <div style="font:400 11.5px -apple-system,sans-serif;color:var(--sub);margin-bottom:14px">Cập nhật khi EVN ban hành biểu giá mới</div>
+        <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">
+          <div style="display:flex;padding:9px 14px;background:var(--surface);font:600 10.5px -apple-system,sans-serif;color:var(--sub)">
+            <div style="width:60px">Bậc</div><div style="flex:1">Từ (kWh)</div><div style="flex:1">Đến (kWh)</div><div style="width:150px">Đơn giá (đ/kWh)</div>
+          </div>
+          <sc-for list="{{ configTiers }}" as="ct" hint-placeholder-count="6">
+          <div style="display:flex;align-items:center;padding:9px 14px;border-top:1px solid var(--border);font:600 12.5px -apple-system,sans-serif">
+            <div style="width:60px">{{ ct.tier }}</div>
+            <div style="flex:1;font:600 12px ui-monospace,monospace">{{ ct.fromText }}</div>
+            <div style="flex:1;font:600 12px ui-monospace,monospace">{{ ct.toText }}</div>
+            <input type="number" value="{{ ct.price }}" onChange="{{ ct.onPriceChange }}" style="width:150px;border:1px solid var(--border);border-radius:7px;padding:6px 10px;font:600 12px ui-monospace,monospace;background:var(--bg);color:var(--text)">
+          </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px">
+          <div style="font:500 12px -apple-system,sans-serif;color:var(--sub)">+ Thêm bậc</div>
+          <div onClick="{{ onSaveConfig }}" style="padding:11px 22px;border-radius:8px;background:var(--accent);color:var(--accent-c);font:600 13px -apple-system,sans-serif;cursor:pointer">{{ saveConfigLabel }}</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isConfigFlat }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="font:600 13px -apple-system,sans-serif;margin-bottom:2px">Giá cố định (không theo bậc thang)</div>
+        <div style="font:400 11.5px -apple-system,sans-serif;color:var(--sub);margin-bottom:14px">Dùng khi tắt tính bậc thang trong hóa đơn</div>
+        <div style="display:grid;grid-template-columns:{{ readingsGridCols }};gap:20px">
+          <div style="border:1px solid var(--border);border-radius:10px;padding:16px">
+            <div style="font:500 11px -apple-system,sans-serif;color:var(--sub);margin-bottom:8px">Giá điện (đ/kWh)</div>
+            <input type="number" value="{{ flatElecPriceInput }}" onChange="{{ onFlatElecPriceChange }}" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:700 15px ui-monospace,monospace;background:var(--bg);color:var(--text)">
+          </div>
+          <div style="border:1px solid var(--border);border-radius:10px;padding:16px">
+            <div style="font:500 11px -apple-system,sans-serif;color:var(--sub);margin-bottom:8px">Giá nước (đ/m³)</div>
+            <input type="number" value="{{ waterPriceInput }}" onChange="{{ onWaterPriceChange }}" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font:700 15px ui-monospace,monospace;background:var(--bg);color:var(--text)">
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px">
+          <div onClick="{{ onSaveConfig }}" style="padding:11px 22px;border-radius:8px;background:var(--accent);color:var(--accent-c);font:600 13px -apple-system,sans-serif;cursor:pointer">{{ saveConfigLabel }}</div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:0;right:0;bottom:0;height:60px;border-top:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:space-around;padding-bottom:env(safe-area-inset-bottom)">
+    <sc-for list="{{ navItemsMobile }}" as="item" hint-placeholder-count="5">
+    <div onClick="{{ item.onClick }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer">
+      <div style="{{ item.dotStyle }}"></div>
+      <div style="{{ item.labelStyle }}">{{ item.label }}</div>
+    </div>
+    </sc-for>
+  </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const LIGHT_VARS = "--bg:#ffffff;--text:oklch(20% 0 0);--sub:oklch(46% 0 0);--border:oklch(89% 0 0);--surface:oklch(97% 0 0);--surface2:oklch(93% 0 0);--dot:oklch(85% 0 0);--accent:oklch(20% 0 0);--accent-c:#ffffff;";
+const DARK_VARS = "--bg:oklch(15% 0 0);--text:oklch(95% 0 0);--sub:oklch(65% 0 0);--border:oklch(28% 0 0);--surface:oklch(20% 0 0);--surface2:oklch(24% 0 0);--dot:oklch(35% 0 0);--accent:oklch(95% 0 0);--accent-c:oklch(15% 0 0);";
+
+const STORAGE_KEY = 'keeper-app-data-v1';
+
+const NAV_DEFS = [
+  { id: 'dashboard', label: 'Tổng quan' },
+  { id: 'rooms', label: 'Phòng' },
+  { id: 'readings', label: 'Chỉ số' },
+  { id: 'invoice', label: 'Hóa đơn' },
+  { id: 'config', label: 'Cấu hình' },
+];
+
+const DEFAULT_BUILDINGS = [
+  { id: 'A', name: 'Nhà A — Nguyễn Trãi', rooms: [
+    { no: 'P101', price: 2500000, status: 'occupied', missing: false },
+    { no: 'P102', price: 2500000, status: 'vacant', missing: false },
+    { no: 'P103', price: 2800000, status: 'occupied', missing: false },
+    { no: 'P104', price: 2800000, status: 'occupied', missing: true },
+    { no: 'P105', price: 3200000, status: 'occupied', missing: false },
+    { no: 'P106', price: 3200000, status: 'vacant', missing: false },
+  ]},
+  { id: 'B', name: 'Nhà B — Lê Văn Sỹ', rooms: [
+    { no: 'P201', price: 2300000, status: 'occupied', missing: false },
+    { no: 'P202', price: 2300000, status: 'occupied', missing: false },
+    { no: 'P203', price: 2600000, status: 'occupied', missing: true },
+    { no: 'P204', price: 2600000, status: 'vacant', missing: false },
+    { no: 'P205', price: 3000000, status: 'occupied', missing: false },
+    { no: 'P206', price: 3000000, status: 'occupied', missing: false },
+  ]},
+  { id: 'C', name: 'Nhà C — Phạm Văn Đồng', rooms: [
+    { no: 'P301', price: 2400000, status: 'occupied', missing: false },
+    { no: 'P302', price: 2400000, status: 'vacant', missing: false },
+    { no: 'P303', price: 2700000, status: 'occupied', missing: false },
+    { no: 'P304', price: 2700000, status: 'occupied', missing: false },
+    { no: 'P305', price: 3100000, status: 'occupied', missing: true },
+    { no: 'P306', price: 3100000, status: 'occupied', missing: false },
+  ]},
+];
+
+const DEFAULT_TIERS = [
+  { tier: 1, size: 50, price: 1984 },
+  { tier: 2, size: 50, price: 2050 },
+  { tier: 3, size: 100, price: 2380 },
+  { tier: 4, size: 100, price: 2998 },
+  { tier: 5, size: 100, price: 3350 },
+  { tier: 6, size: null, price: 3460 },
+];
+
+function vnd(n) {
+  return Math.round(n).toLocaleString('vi-VN') + 'đ';
+}
+
+function loadSaved() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.buildings)) return null;
+    return parsed;
+  } catch (e) {
+    return null;
+  }
+}
+
+class Component extends DCLogic {
+  state = {
+    theme: 'light',
+    screen: 'dashboard',
+    isMobile: (typeof window !== 'undefined' && window.innerWidth < 760),
+    selectedBuilding: 'A',
+    selectedRoom: 'P101',
+    activeMonth: 7, activeYear: 2026,
+    configTab: 'tiered',
+    applyScope: 'current',
+    tieredOn: true,
+    oldElec: 1240, newElec: 1365,
+    oldWater: 88, newWater: 95,
+    flatElecPrice: 2200,
+    waterPrice: 15000,
+    tiers: DEFAULT_TIERS,
+    buildings: DEFAULT_BUILDINGS,
+    savedFlash: null,
+  };
+
+  constructor(props) {
+    super(props);
+    const saved = loadSaved();
+    if (saved) {
+      this.state = {
+        ...this.state,
+        theme: saved.theme ?? this.state.theme,
+        buildings: saved.buildings ?? this.state.buildings,
+        tiers: saved.tiers ?? this.state.tiers,
+        flatElecPrice: saved.flatElecPrice ?? this.state.flatElecPrice,
+        waterPrice: saved.waterPrice ?? this.state.waterPrice,
+        activeMonth: saved.activeMonth ?? this.state.activeMonth,
+        activeYear: saved.activeYear ?? this.state.activeYear,
+        applyScope: saved.applyScope ?? this.state.applyScope,
+        tieredOn: saved.tieredOn ?? this.state.tieredOn,
+      };
+      const firstBuilding = this.state.buildings[0];
+      if (firstBuilding && !this.state.buildings.some(b => b.id === this.state.selectedBuilding)) {
+        this.state.selectedBuilding = firstBuilding.id;
+      }
+      const bld = this.state.buildings.find(b => b.id === this.state.selectedBuilding) || firstBuilding;
+      if (bld && !bld.rooms.some(r => r.no === this.state.selectedRoom)) {
+        this.state.selectedRoom = bld.rooms[0] ? bld.rooms[0].no : '';
+      }
+    }
+  }
+
+  componentDidMount() {
+    this._onResize = () => this.setState({ isMobile: window.innerWidth < 760 });
+    window.addEventListener('resize', this._onResize);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('resize', this._onResize);
+  }
+
+  persist = () => {
+    const s = this.state;
+    const data = {
+      theme: s.theme,
+      buildings: s.buildings,
+      tiers: s.tiers,
+      flatElecPrice: s.flatElecPrice,
+      waterPrice: s.waterPrice,
+      activeMonth: s.activeMonth,
+      activeYear: s.activeYear,
+      applyScope: s.applyScope,
+      tieredOn: s.tieredOn,
+    };
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+  };
+
+  toggleTheme = () => this.setState(s => ({ theme: s.theme === 'light' ? 'dark' : 'light' }), this.persist);
+  setScreen = (id) => () => this.setState({ screen: id });
+  setBuilding = (id) => () => this.setState(s => {
+    const b = s.buildings.find(bd => bd.id === id);
+    return { selectedBuilding: id, selectedRoom: b && b.rooms[0] ? b.rooms[0].no : s.selectedRoom };
+  });
+  toggleTiered = () => this.setState(s => ({ tieredOn: !s.tieredOn }), this.persist);
+  setConfigTab = (id) => () => this.setState({ configTab: id });
+  onApplyScopeChange = (e) => this.setState({ applyScope: e.target.value }, this.persist);
+  onMonthChange = (e) => this.setState({ activeMonth: Number(e.target.value) }, this.persist);
+  onYearChange = (e) => this.setState({ activeYear: Number(e.target.value) }, this.persist);
+
+  onFlatElecPriceChange = (e) => this.setState({ flatElecPrice: Number(e.target.value) || 0 }, this.persist);
+  onWaterPriceChange = (e) => this.setState({ waterPrice: Number(e.target.value) || 0 }, this.persist);
+  onRoomChange = (e) => this.setState({ selectedRoom: e.target.value });
+  onOldElec = (e) => this.setState({ oldElec: Number(e.target.value) || 0 });
+  onNewElec = (e) => this.setState({ newElec: Number(e.target.value) || 0 });
+  onOldWater = (e) => this.setState({ oldWater: Number(e.target.value) || 0 });
+  onNewWater = (e) => this.setState({ newWater: Number(e.target.value) || 0 });
+  onSaveReading = () => { this.setState({ savedFlash: 'reading' }); setTimeout(() => this.setState({ savedFlash: null }), 1400); };
+  onSaveConfig = () => { this.setState({ savedFlash: 'config' }, this.persist); setTimeout(() => this.setState({ savedFlash: null }), 1400); };
+  onTierPriceChange = (idx) => (e) => {
+    const price = Number(e.target.value) || 0;
+    this.setState(s => {
+      const tiers = s.tiers.slice();
+      tiers[idx] = { ...tiers[idx], price };
+      return { tiers };
+    }, this.persist);
+  };
+
+  onBuildingNameChange = (buildingId) => (e) => {
+    const name = e.target.value;
+    this.setState(s => ({
+      buildings: s.buildings.map(b => b.id === buildingId ? { ...b, name } : b),
+    }), this.persist);
+  };
+
+  onRoomFieldChange = (buildingId, idx, field) => (e) => {
+    const value = field === 'price' ? (Number(e.target.value) || 0) : e.target.value;
+    this.setState(s => {
+      const building = s.buildings.find(b => b.id === buildingId);
+      const oldNo = building.rooms[idx].no;
+      const buildings = s.buildings.map(b => {
+        if (b.id !== buildingId) return b;
+        const rooms = b.rooms.map((r, i) => i === idx ? { ...r, [field]: value } : r);
+        return { ...b, rooms };
+      });
+      let selectedRoom = s.selectedRoom;
+      if (field === 'no' && selectedRoom === oldNo) selectedRoom = value;
+      return { buildings, selectedRoom };
+    }, this.persist);
+  };
+
+  onAddRoom = (buildingId) => () => {
+    this.setState(s => ({
+      buildings: s.buildings.map(b => {
+        if (b.id !== buildingId) return b;
+        const n = b.rooms.length + 1;
+        return { ...b, rooms: [...b.rooms, { no: 'Phòng mới ' + n, price: 0, status: 'vacant', missing: false }] };
+      }),
+    }), this.persist);
+  };
+
+  onDeleteRoom = (buildingId, idx) => () => {
+    this.setState(s => {
+      const building = s.buildings.find(b => b.id === buildingId);
+      const deletedNo = building.rooms[idx].no;
+      const buildings = s.buildings.map(b => {
+        if (b.id !== buildingId) return b;
+        return { ...b, rooms: b.rooms.filter((_, i) => i !== idx) };
+      });
+      let selectedRoom = s.selectedRoom;
+      if (selectedRoom === deletedNo) {
+        const remaining = buildings.find(b => b.id === buildingId).rooms;
+        selectedRoom = remaining.length ? remaining[0].no : ((buildings.flatMap(b => b.rooms)[0] || {}).no || '');
+      }
+      return { buildings, selectedRoom };
+    }, this.persist);
+  };
+
+  calcTiered(kwh, tiers) {
+    let remaining = kwh, rows = [], total = 0;
+    for (const t of tiers) {
+      if (remaining <= 0) break;
+      const size = t.size == null ? remaining : Math.min(t.size, remaining);
+      if (size <= 0) continue;
+      const cost = size * t.price;
+      rows.push({ tier: t.tier, used: size, price: t.price, cost });
+      total += cost;
+      remaining -= size;
+    }
+    return { rows, total };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const isDesktop = !s.isMobile;
+    const isLight = s.theme === 'light';
+    const rootStyle = (isLight ? LIGHT_VARS : DARK_VARS) +
+      "min-height:100vh;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;display:flex;";
+
+    const themeBtnStyle = "padding:6px 12px;border:1px solid var(--border);border-radius:7px;font:600 11px -apple-system,sans-serif;color:var(--sub);cursor:pointer;";
+    const themeBtnLabel = isLight ? 'Tối' : 'Sáng';
+
+    const navActive = "padding:9px 10px;border-radius:7px;background:var(--accent);color:var(--accent-c);font:600 12.5px -apple-system,sans-serif;cursor:pointer;";
+    const navInactive = "padding:9px 10px;font:500 12.5px -apple-system,sans-serif;color:var(--sub);cursor:pointer;";
+    const navItems = NAV_DEFS.map(n => ({
+      id: n.id, label: n.label,
+      onClick: this.setScreen(n.id),
+      style: n.id === s.screen ? navActive : navInactive,
+    }));
+
+    const dotActive = "width:6px;height:6px;border-radius:50%;background:var(--text);";
+    const dotInactive = "width:6px;height:6px;border-radius:50%;background:var(--dot);";
+    const labelActive = "font:600 9.5px -apple-system,sans-serif;color:var(--text);";
+    const labelInactive = "font:500 9.5px -apple-system,sans-serif;color:var(--sub);";
+    const navItemsMobile = NAV_DEFS.map(n => ({
+      id: n.id, label: n.label,
+      onClick: this.setScreen(n.id),
+      dotStyle: n.id === s.screen ? dotActive : dotInactive,
+      labelStyle: n.id === s.screen ? labelActive : labelInactive,
+    }));
+
+    const monthOptions = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: 'Tháng ' + (i + 1) }));
+    const yearOptions = [2024, 2025, 2026, 2027, 2028].map(y => ({ value: y, label: String(y) }));
+    const activeMonthText = 'Tháng ' + s.activeMonth + ' · ' + s.activeYear;
+
+    const buildings = s.buildings;
+
+    // dashboard aggregates
+    const allRooms = buildings.flatMap(b => b.rooms);
+    const totalRooms = allRooms.length;
+    const occupiedRooms = allRooms.filter(r => r.status === 'occupied').length;
+    const vacantRooms = totalRooms - occupiedRooms;
+    const revenue = allRooms.filter(r => r.status === 'occupied').reduce((a, r) => a + r.price, 0);
+    const revenueText = (revenue / 1000000).toFixed(1).replace('.', ',') + 'tr';
+    const missingRooms = allRooms.filter(r => r.missing);
+    const missingCount = missingRooms.length;
+    const hasMissing = missingCount > 0;
+    const missingListText = missingRooms.map(r => {
+      const b = buildings.find(bd => bd.rooms.includes(r));
+      return r.no + ' · ' + (b ? b.name.split(' — ')[0] : '');
+    }).join(' · ');
+
+    const buildingCards = buildings.map(b => {
+      const occ = b.rooms.filter(r => r.status === 'occupied').length;
+      const miss = b.rooms.filter(r => r.missing).length;
+      return {
+        name: b.name, roomCount: b.rooms.length,
+        occupiedText: occ + '/' + b.rooms.length + ' đang thuê',
+        missing: miss > 0,
+        missingText: miss + ' phòng chưa nhập chỉ số',
+      };
+    });
+
+    // rooms screen
+    const buildingTabActive = "padding:7px 14px;border-radius:8px;background:var(--accent);color:var(--accent-c);font:600 12px -apple-system,sans-serif;cursor:pointer;";
+    const buildingTabInactive = "padding:7px 14px;border-radius:8px;border:1px solid var(--border);font:500 12px -apple-system,sans-serif;color:var(--sub);cursor:pointer;";
+    const buildingTabs = buildings.map(b => ({
+      id: b.id, label: 'Nhà ' + b.id,
+      onClick: this.setBuilding(b.id),
+      style: b.id === s.selectedBuilding ? buildingTabActive : buildingTabInactive,
+    }));
+    const currentBuilding = buildings.find(b => b.id === s.selectedBuilding) || buildings[0];
+    const currentBuildingOcc = currentBuilding.rooms.filter(r => r.status === 'occupied').length;
+    const currentBuildingSummary = currentBuilding.rooms.length + ' phòng · ' + (currentBuilding.rooms.length - currentBuildingOcc) + ' trống';
+    const currentRooms = currentBuilding.rooms.map((r, idx) => ({
+      no: r.no,
+      price: r.price,
+      status: r.status,
+      onNoChange: this.onRoomFieldChange(currentBuilding.id, idx, 'no'),
+      onPriceChange: this.onRoomFieldChange(currentBuilding.id, idx, 'price'),
+      onStatusChange: this.onRoomFieldChange(currentBuilding.id, idx, 'status'),
+      onDelete: this.onDeleteRoom(currentBuilding.id, idx),
+    }));
+
+    // readings
+    const allRoomOptions = allRooms.map(r => ({ no: r.no, label: r.no }));
+    const elecConsumption = Math.max(0, s.newElec - s.oldElec);
+    const waterConsumption = Math.max(0, s.newWater - s.oldWater);
+    const elecConsumptionText = elecConsumption + ' kWh';
+    const waterConsumptionText = waterConsumption + ' m³';
+
+    // invoice
+    const { rows: tierRowsRaw, total: tieredElecTotal } = this.calcTiered(elecConsumption, s.tiers);
+    const tierRows = tierRowsRaw.map(r => ({
+      tier: r.tier, usedText: r.used + ' kWh', priceText: vnd(r.price), costText: vnd(r.cost),
+    }));
+    const flatElecTotal = elecConsumption * s.flatElecPrice;
+    const elecTotal = s.tieredOn ? tieredElecTotal : flatElecTotal;
+    const waterTotal = waterConsumption * s.waterPrice;
+    const grandTotal = elecTotal + waterTotal;
+
+    const toggleTrackStyle = "width:38px;height:22px;border-radius:11px;position:relative;cursor:pointer;" +
+      (s.tieredOn ? "background:var(--accent);" : "background:var(--surface2);border:1px solid var(--border);");
+    const toggleThumbStyle = "width:18px;height:18px;border-radius:50%;position:absolute;top:1px;" +
+      (s.tieredOn ? "right:2px;background:var(--bg);" : "left:2px;background:var(--sub);");
+
+    // config
+    const configTabActive = "padding:9px 16px;border-radius:8px;background:var(--accent);color:var(--accent-c);font:600 12.5px -apple-system,sans-serif;cursor:pointer;";
+    const configTabInactive = "padding:9px 16px;border-radius:8px;border:1px solid var(--border);font:500 12.5px -apple-system,sans-serif;color:var(--sub);cursor:pointer;";
+    const configTabs = [
+      { id: 'tiered', label: 'Bậc thang' },
+      { id: 'flat', label: 'Giá cố định' },
+    ].map(t => ({
+      id: t.id, label: t.label,
+      onClick: this.setConfigTab(t.id),
+      style: t.id === s.configTab ? configTabActive : configTabInactive,
+    }));
+
+    let cursor = 0;
+    const configTiers = s.tiers.map((t, idx) => {
+      const from = cursor + 1;
+      const to = t.size == null ? null : cursor + t.size;
+      cursor = to == null ? cursor : to;
+      return {
+        tier: t.tier,
+        fromText: String(from),
+        toText: to == null ? '—' : String(to),
+        price: t.price,
+        onPriceChange: this.onTierPriceChange(idx),
+      };
+    });
+
+    return {
+      rootStyle,
+      isDesktop, isMobile: s.isMobile, isMobileTop: s.isMobile,
+      themeBtnStyle, themeBtnLabel, toggleTheme: this.toggleTheme,
+      activeMonth: s.activeMonth, activeYear: s.activeYear, activeMonthText,
+      monthOptions, yearOptions, onMonthChange: this.onMonthChange, onYearChange: this.onYearChange,
+      navItems, navItemsMobile,
+      contentPadding: isDesktop ? '28px 32px' : '18px 18px',
+      contentBottomPad: s.isMobile ? '80px' : '28px',
+
+      isDashboard: s.screen === 'dashboard',
+      isRooms: s.screen === 'rooms',
+      isReadings: s.screen === 'readings',
+      isInvoice: s.screen === 'invoice',
+      isConfig: s.screen === 'config',
+
+      statGridCols: isDesktop ? 'repeat(4,1fr)' : 'repeat(2,1fr)',
+      buildingGridCols: isDesktop ? 'repeat(3,1fr)' : '1fr',
+      readingsGridCols: isDesktop ? '1fr 1fr' : '1fr',
+
+      hasMissing, missingCount, missingListText,
+      totalRooms, occupiedRooms, vacantRooms, revenueText,
+      buildingCards,
+
+      buildingTabs, currentBuildingSummary, currentRooms,
+      currentBuildingName: currentBuilding.name,
+      onCurrentBuildingNameChange: this.onBuildingNameChange(currentBuilding.id),
+      onAddRoom: this.onAddRoom(currentBuilding.id),
+
+      allRoomOptions, selectedRoom: s.selectedRoom, onRoomChange: this.onRoomChange,
+      oldElec: s.oldElec, newElec: s.newElec, oldWater: s.oldWater, newWater: s.newWater,
+      onOldElec: this.onOldElec, onNewElec: this.onNewElec, onOldWater: this.onOldWater, onNewWater: this.onNewWater,
+      elecConsumptionText, waterConsumptionText,
+      onSaveReading: this.onSaveReading,
+      saveLabel: s.savedFlash === 'reading' ? 'Đã lưu ✓' : 'Lưu chỉ số',
+
+      tieredOn: s.tieredOn, tieredOff: !s.tieredOn, toggleTiered: this.toggleTiered,
+      tieredStatusText: s.tieredOn ? 'Đang bật — tính theo biểu giá bậc thang EVN' : 'Đang tắt — áp dụng đơn giá bình quân',
+      toggleTrackStyle, toggleThumbStyle,
+      tierRows, elecTotalText: vnd(elecTotal), waterTotalText: vnd(waterTotal), waterPriceText: vnd(s.waterPrice),
+      flatElecPriceText: vnd(s.flatElecPrice), grandTotalText: vnd(grandTotal),
+
+      applyScope: s.applyScope, onApplyScopeChange: this.onApplyScopeChange,
+      applyScopeOptions: [
+        { value: 'current', label: 'Tháng hiện tại' },
+        { value: 'next', label: 'Từ tháng tiếp theo' },
+      ],
+      configTabs, isConfigTiered: s.configTab === 'tiered', isConfigFlat: s.configTab === 'flat',
+      flatElecPriceInput: s.flatElecPrice, waterPriceInput: s.waterPrice,
+      onFlatElecPriceChange: this.onFlatElecPriceChange, onWaterPriceChange: this.onWaterPriceChange,
+      configTiers, onSaveConfig: this.onSaveConfig,
+      saveConfigLabel: s.savedFlash === 'config' ? 'Đã lưu ✓' : 'Lưu thay đổi',
+    };
+  }
+}
+
+</script>
+</body>
+</html>
