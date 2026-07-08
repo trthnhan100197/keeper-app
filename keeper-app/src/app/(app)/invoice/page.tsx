@@ -37,7 +37,7 @@ export default async function InvoicePage({
 
   return (
     <div>
-      <div className="print:hidden" style={{ display: "flex", gap: 8, margin: "0 0 14px" }}>
+      <div className="flex print:hidden" style={{ gap: 8, margin: "0 0 14px" }}>
         {propertyList.map((p) => {
           const active = p.id === currentPropertyId;
           const params = new URLSearchParams(qs);
@@ -242,6 +242,7 @@ function InvoiceBody({
       )}
 
       <div
+        className="invoice-total"
         style={{
           display: "flex",
           justifyContent: "space-between",

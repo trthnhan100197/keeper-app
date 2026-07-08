@@ -41,7 +41,7 @@ export function InvoiceActions({
   const normalizedPhone = tenantPhone?.replace(/[^0-9]/g, "") || "";
 
   return (
-    <div className="print:hidden" style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
+    <div className="flex flex-wrap print:hidden" style={{ gap: 8, marginTop: 16 }}>
       <div onClick={() => window.print()} style={buttonStyle}>
         In hóa đơn
       </div>
