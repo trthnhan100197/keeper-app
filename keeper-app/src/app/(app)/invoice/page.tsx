@@ -58,7 +58,8 @@ export default async function InvoicePage({
       unitPrice: Number(t.unitPrice),
     })),
   });
-  const waterTotal = calculateWaterBill(waterConsumption, Number(reading.waterUnitPrice));
+  const waterUnitPrice = Number(config.defaultWaterPrice);
+  const waterTotal = calculateWaterBill(waterConsumption, waterUnitPrice);
   const grandTotal = elecResult.total + waterTotal;
 
   return (
@@ -115,7 +116,7 @@ export default async function InvoicePage({
           <div style={{ display: "flex", alignItems: "center", padding: "9px 14px", borderTop: "1px solid var(--border)", font: "600 12px -apple-system,sans-serif" }}>
             <div style={{ flex: 1 }}>Nước · {waterConsumption} m³</div>
             <div style={{ width: 100 }} />
-            <div style={{ width: 90, font: "600 12px ui-monospace,monospace" }}>{vnd(Number(reading.waterUnitPrice))}</div>
+            <div style={{ width: 90, font: "600 12px ui-monospace,monospace" }}>{vnd(waterUnitPrice)}</div>
             <div style={{ width: 110, textAlign: "right", font: "600 12px ui-monospace,monospace" }}>{vnd(waterTotal)}</div>
           </div>
         </div>
@@ -144,7 +145,7 @@ export default async function InvoicePage({
           <div style={{ display: "flex", alignItems: "center", padding: "12px 14px", borderTop: "1px solid var(--border)", font: "600 12.5px -apple-system,sans-serif" }}>
             <div style={{ flex: 1 }}>Nước</div>
             <div style={{ width: 120, font: "600 12px ui-monospace,monospace" }}>{waterConsumption} m³</div>
-            <div style={{ width: 90, font: "600 12px ui-monospace,monospace" }}>{vnd(Number(reading.waterUnitPrice))}</div>
+            <div style={{ width: 90, font: "600 12px ui-monospace,monospace" }}>{vnd(waterUnitPrice)}</div>
             <div style={{ width: 110, textAlign: "right", font: "700 12.5px ui-monospace,monospace" }}>{vnd(waterTotal)}</div>
           </div>
         </div>
