@@ -144,6 +144,7 @@ export async function saveConfig(input: {
   flatUnitPrice: number;
   defaultWaterPrice: number;
   tiers: { id: string; unitPrice: number }[];
+  feeTypes: { id: string; name: string; defaultAmount: number }[];
 }) {
   await prisma.$transaction([
     prisma.billingConfig.update({
@@ -157,7 +158,11 @@ export async function saveConfig(input: {
     ...input.tiers.map((t) =>
       prisma.electricTier.update({ where: { id: t.id }, data: { unitPrice: t.unitPrice } })
     ),
+    ...input.feeTypes.map((ft) =>
+      prisma.feeType.update({ where: { id: ft.id }, data: { name: ft.name, defaultAmount: ft.defaultAmount } })
+    ),
   ]);
   revalidatePath("/config");
+  revalidatePath("/readings");
   revalidatePath("/invoice");
 }

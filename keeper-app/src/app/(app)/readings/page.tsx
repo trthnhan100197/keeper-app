@@ -35,7 +35,7 @@ export default async function ReadingsPage({
   const feeInputs = feeTypes.map((ft) => ({
     feeTypeId: ft.id,
     name: ft.name,
-    amount: existingFees.get(ft.id) ?? (reading ? 0 : Number(ft.defaultAmount)),
+    amount: existingFees.get(ft.id) ?? Number(ft.defaultAmount),
   }));
 
   return (

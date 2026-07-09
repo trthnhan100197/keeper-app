@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveConfig } from "@/app/(app)/actions";
+import { saveConfig, addFeeType, deleteFeeType } from "@/app/(app)/actions";
 
 type Tier = { id: string; tierOrder: number; fromKwh: number; toKwh: number | null; unitPrice: number };
+type FeeType = { id: string; name: string; defaultAmount: number };
 
 const tabActiveStyle: React.CSSProperties = {
   padding: "9px 16px",
@@ -28,20 +29,30 @@ export function ConfigForm({
   flatUnitPrice,
   defaultWaterPrice,
   tiers,
+  feeTypes,
 }: {
   configId: string;
   useTiers: boolean;
   flatUnitPrice: number;
   defaultWaterPrice: number;
   tiers: Tier[];
+  feeTypes: FeeType[];
 }) {
   const [configTab, setConfigTab] = useState<"tiered" | "flat">("tiered");
   const [applyScope, setApplyScope] = useState<"current" | "next">("current");
   const [tierPrices, setTierPrices] = useState(Object.fromEntries(tiers.map((t) => [t.id, t.unitPrice])));
   const [flatPrice, setFlatPrice] = useState(flatUnitPrice);
   const [waterPrice, setWaterPrice] = useState(defaultWaterPrice);
+  const [feeTypeEdits, setFeeTypeEdits] = useState<Record<string, { name?: string; defaultAmount?: number }>>({});
   const [savedFlash, setSavedFlash] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  function feeTypeValue(ft: FeeType) {
+    return {
+      name: feeTypeEdits[ft.id]?.name ?? ft.name,
+      defaultAmount: feeTypeEdits[ft.id]?.defaultAmount ?? ft.defaultAmount,
+    };
+  }
 
   function onSave() {
     startTransition(async () => {
@@ -51,28 +62,12 @@ export function ConfigForm({
         flatUnitPrice: flatPrice,
         defaultWaterPrice: waterPrice,
         tiers: tiers.map((t) => ({ id: t.id, unitPrice: tierPrices[t.id] })),
+        feeTypes: feeTypes.map((ft) => ({ id: ft.id, ...feeTypeValue(ft) })),
       });
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1400);
     });
   }
-
-  const saveButton = (
-    <div
-      onClick={onSave}
-      style={{
-        padding: "11px 22px",
-        borderRadius: 8,
-        background: "var(--accent)",
-        color: "var(--accent-c)",
-        font: "600 13px -apple-system,sans-serif",
-        cursor: "pointer",
-        opacity: isPending ? 0.6 : 1,
-      }}
-    >
-      {savedFlash ? "Đã lưu ✓" : "Lưu thay đổi"}
-    </div>
-  );
 
   return (
     <div>
@@ -155,9 +150,8 @@ export function ConfigForm({
               </div>
             ))}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
+          <div style={{ marginTop: 16 }}>
             <div style={{ font: "500 12px -apple-system,sans-serif", color: "var(--sub)" }}>+ Thêm bậc</div>
-            {saveButton}
           </div>
         </div>
       ) : (
@@ -208,9 +202,132 @@ export function ConfigForm({
               />
             </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>{saveButton}</div>
         </div>
       )}
+
+      <div style={{ marginTop: 28 }}>
+        <div style={{ font: "600 13px -apple-system,sans-serif", marginBottom: 2 }}>Các khoản phí khác</div>
+        <div style={{ font: "400 11.5px -apple-system,sans-serif", color: "var(--sub)", marginBottom: 14 }}>
+          Phí quản lý, mạng, rác... tự định nghĩa — nhập số tiền cụ thể theo từng phòng ở màn Chỉ số
+        </div>
+        <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+          <div
+            style={{
+              display: "flex",
+              padding: "9px 14px",
+              background: "var(--surface)",
+              font: "600 10.5px -apple-system,sans-serif",
+              color: "var(--sub)",
+            }}
+          >
+            <div style={{ flex: 1 }}>Tên khoản phí</div>
+            <div style={{ width: 150 }}>Giá gợi ý (đ)</div>
+            <div style={{ width: 28 }} />
+          </div>
+          {feeTypes.length === 0 && (
+            <div style={{ padding: "12px 14px", font: "500 12px -apple-system,sans-serif", color: "var(--sub)" }}>
+              Chưa có khoản phí nào.
+            </div>
+          )}
+          {feeTypes.map((ft) => (
+            <div
+              key={ft.id}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", borderTop: "1px solid var(--border)" }}
+            >
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text"
+                  value={feeTypeValue(ft).name}
+                  onChange={(e) =>
+                    setFeeTypeEdits((prev) => ({ ...prev, [ft.id]: { ...prev[ft.id], name: e.target.value } }))
+                  }
+                  style={{
+                    width: "100%",
+                    border: "1px solid var(--border)",
+                    borderRadius: 7,
+                    padding: "7px 10px",
+                    font: "600 12.5px -apple-system,sans-serif",
+                    background: "var(--bg)",
+                    color: "var(--text)",
+                  }}
+                />
+              </div>
+              <div style={{ width: 150 }}>
+                <input
+                  type="number"
+                  value={feeTypeValue(ft).defaultAmount}
+                  onChange={(e) =>
+                    setFeeTypeEdits((prev) => ({
+                      ...prev,
+                      [ft.id]: { ...prev[ft.id], defaultAmount: Number(e.target.value) || 0 },
+                    }))
+                  }
+                  style={{
+                    width: "100%",
+                    border: "1px solid var(--border)",
+                    borderRadius: 7,
+                    padding: "7px 10px",
+                    font: "600 12px ui-monospace,monospace",
+                    background: "var(--bg)",
+                    color: "var(--text)",
+                  }}
+                />
+              </div>
+              <div
+                onClick={() => startTransition(() => deleteFeeType(ft.id))}
+                style={{
+                  width: 28,
+                  height: 28,
+                  flex: "none",
+                  borderRadius: 7,
+                  border: "1px solid var(--border)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  color: "var(--sub)",
+                  font: "600 15px -apple-system,sans-serif",
+                }}
+              >
+                ×
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <div
+            onClick={() => startTransition(() => addFeeType("Phí mới", 0))}
+            style={{
+              display: "inline-block",
+              padding: "9px 16px",
+              borderRadius: 8,
+              border: "1px dashed var(--sub)",
+              font: "500 12px -apple-system,sans-serif",
+              color: "var(--sub)",
+              cursor: "pointer",
+            }}
+          >
+            + Thêm loại phí
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end" }}>
+        <div
+          onClick={onSave}
+          style={{
+            padding: "11px 22px",
+            borderRadius: 8,
+            background: "var(--accent)",
+            color: "var(--accent-c)",
+            font: "600 13px -apple-system,sans-serif",
+            cursor: "pointer",
+            opacity: isPending ? 0.6 : 1,
+          }}
+        >
+          {savedFlash ? "Đã lưu ✓" : "Lưu thay đổi"}
+        </div>
+      </div>
     </div>
   );
 }
