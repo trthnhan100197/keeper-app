@@ -1,10 +1,11 @@
 import { connection } from "next/server";
-import { getActiveBillingConfig } from "@/lib/data";
+import { getActiveBillingConfig, getFeeTypes } from "@/lib/data";
 import { ConfigForm } from "@/components/config-form";
+import { FeeTypeManager } from "@/components/fee-type-manager";
 
 export default async function ConfigPage() {
   await connection();
-  const config = await getActiveBillingConfig();
+  const [config, feeTypes] = await Promise.all([getActiveBillingConfig(), getFeeTypes()]);
 
   if (!config) {
     return (
@@ -15,18 +16,21 @@ export default async function ConfigPage() {
   }
 
   return (
-    <ConfigForm
-      configId={config.id}
-      useTiers={config.useTiers}
-      flatUnitPrice={Number(config.flatUnitPrice ?? 0)}
-      defaultWaterPrice={Number(config.defaultWaterPrice)}
-      tiers={config.tiers.map((t) => ({
-        id: t.id,
-        tierOrder: t.tierOrder,
-        fromKwh: t.fromKwh,
-        toKwh: t.toKwh,
-        unitPrice: Number(t.unitPrice),
-      }))}
-    />
+    <div>
+      <ConfigForm
+        configId={config.id}
+        useTiers={config.useTiers}
+        flatUnitPrice={Number(config.flatUnitPrice ?? 0)}
+        defaultWaterPrice={Number(config.defaultWaterPrice)}
+        tiers={config.tiers.map((t) => ({
+          id: t.id,
+          tierOrder: t.tierOrder,
+          fromKwh: t.fromKwh,
+          toKwh: t.toKwh,
+          unitPrice: Number(t.unitPrice),
+        }))}
+      />
+      <FeeTypeManager feeTypes={feeTypes.map((ft) => ({ id: ft.id, name: ft.name, defaultAmount: Number(ft.defaultAmount) }))} />
+    </div>
   );
 }

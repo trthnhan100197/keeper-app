@@ -34,7 +34,12 @@ export async function getRoomOptions() {
 export async function getReadingForRoomPeriod(roomId: string, month: number, year: number) {
   return prisma.meterReading.findUnique({
     where: { roomId_month_year: { roomId, month, year } },
+    include: { fees: { include: { feeType: true } } },
   });
+}
+
+export async function getFeeTypes() {
+  return prisma.feeType.findMany({ orderBy: { createdAt: "asc" } });
 }
 
 export async function getMostRecentReading(roomId: string) {

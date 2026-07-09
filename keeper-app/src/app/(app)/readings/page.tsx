@@ -1,4 +1,4 @@
-import { getRoomOptions, getReadingForRoomPeriod, getMostRecentReading, getActiveBillingConfig } from "@/lib/data";
+import { getRoomOptions, getReadingForRoomPeriod, getMostRecentReading, getActiveBillingConfig, getFeeTypes } from "@/lib/data";
 import { currentPeriod } from "@/lib/nav";
 import { RoomSelect } from "@/components/room-select";
 import { ReadingsForm } from "@/components/readings-form";
@@ -17,10 +17,11 @@ export default async function ReadingsPage({
     return <div style={{ font: "500 13px -apple-system,sans-serif", color: "var(--sub)" }}>Chưa có phòng nào.</div>;
   }
 
-  const [reading, mostRecent, activeConfig] = await Promise.all([
+  const [reading, mostRecent, activeConfig, feeTypes] = await Promise.all([
     getReadingForRoomPeriod(currentRoomId, month, year),
     getMostRecentReading(currentRoomId),
     getActiveBillingConfig(),
+    getFeeTypes(),
   ]);
 
   const initialElecOld = reading?.electricOld ?? mostRecent?.electricNew ?? 0;
@@ -29,6 +30,13 @@ export default async function ReadingsPage({
   const initialWaterNew = reading?.waterNew ?? initialWaterOld;
   const waterUnitPrice = reading ? Number(reading.waterUnitPrice) : Number(activeConfig?.defaultWaterPrice ?? 0);
   const initialUseTiers = reading?.useTiers ?? mostRecent?.useTiers ?? activeConfig?.useTiers ?? true;
+
+  const existingFees = new Map(reading?.fees.map((f) => [f.feeTypeId, Number(f.amount)]) ?? []);
+  const feeInputs = feeTypes.map((ft) => ({
+    feeTypeId: ft.id,
+    name: ft.name,
+    amount: existingFees.get(ft.id) ?? (reading ? 0 : Number(ft.defaultAmount)),
+  }));
 
   return (
     <div>
@@ -50,6 +58,7 @@ export default async function ReadingsPage({
         initialWaterNew={initialWaterNew}
         waterUnitPrice={waterUnitPrice}
         initialUseTiers={initialUseTiers}
+        feeInputs={feeInputs}
       />
     </div>
   );

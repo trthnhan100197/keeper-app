@@ -22,6 +22,7 @@ function buildMessage(input: {
   waterNew: number;
   elecWaterTotalText: string;
   monthlyRent: number;
+  fees: { name: string; amount: number }[];
   grandTotalText: string;
 }) {
   return [
@@ -30,6 +31,7 @@ function buildMessage(input: {
     `Nước: ${input.waterOld} -> ${input.waterNew} m³`,
     `Tổng tiền điện nước: ${input.elecWaterTotalText}`,
     `Tiền phòng: ${vnd(input.monthlyRent)}`,
+    ...input.fees.map((f) => `${f.name}: ${vnd(f.amount)}`),
     `Tổng cộng: ${input.grandTotalText}`,
     `Vui lòng thanh toán trước ngày 5 hàng tháng. Cảm ơn!`,
   ].join("\n");
@@ -46,6 +48,7 @@ export function InvoiceActions({
   waterNew,
   elecWaterTotalText,
   monthlyRent,
+  fees,
   grandTotalText,
 }: {
   roomNo: string;
@@ -58,6 +61,7 @@ export function InvoiceActions({
   waterNew: number;
   elecWaterTotalText: string;
   monthlyRent: number;
+  fees: { name: string; amount: number }[];
   grandTotalText: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -71,6 +75,7 @@ export function InvoiceActions({
     waterNew,
     elecWaterTotalText,
     monthlyRent,
+    fees,
     grandTotalText,
   });
   const normalizedPhone = tenantPhone?.replace(/[^0-9]/g, "") || "";

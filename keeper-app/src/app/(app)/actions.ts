@@ -84,23 +84,58 @@ export async function saveReading(input: {
   waterNew: number;
   waterUnitPrice: number;
   useTiers: boolean;
+  fees: { feeTypeId: string; amount: number }[];
 }) {
+  const { fees, ...readingInput } = input;
   const activeConfig = await prisma.billingConfig.findFirst({ where: { isActive: true } });
-  await prisma.meterReading.upsert({
+  const reading = await prisma.meterReading.upsert({
     where: { roomId_month_year: { roomId: input.roomId, month: input.month, year: input.year } },
-    create: { ...input, billingConfigId: activeConfig?.id },
+    create: { ...readingInput, billingConfigId: activeConfig?.id },
     update: {
-      electricOld: input.electricOld,
-      electricNew: input.electricNew,
-      waterOld: input.waterOld,
-      waterNew: input.waterNew,
-      waterUnitPrice: input.waterUnitPrice,
-      useTiers: input.useTiers,
+      electricOld: readingInput.electricOld,
+      electricNew: readingInput.electricNew,
+      waterOld: readingInput.waterOld,
+      waterNew: readingInput.waterNew,
+      waterUnitPrice: readingInput.waterUnitPrice,
+      useTiers: readingInput.useTiers,
     },
   });
+
+  const nonZeroFees = fees.filter((f) => f.amount > 0);
+  await prisma.$transaction([
+    prisma.fee.deleteMany({ where: { meterReadingId: reading.id } }),
+    ...(nonZeroFees.length > 0
+      ? [
+          prisma.fee.createMany({
+            data: nonZeroFees.map((f) => ({ meterReadingId: reading.id, feeTypeId: f.feeTypeId, amount: f.amount })),
+          }),
+        ]
+      : []),
+  ]);
+
   revalidatePath("/readings");
   revalidatePath("/invoice");
   revalidatePath("/dashboard");
+}
+
+export async function addFeeType(name: string, defaultAmount: number) {
+  await prisma.feeType.create({ data: { name, defaultAmount } });
+  revalidatePath("/config");
+  revalidatePath("/readings");
+}
+
+export async function updateFeeType(id: string, data: { name?: string; defaultAmount?: number }) {
+  await prisma.feeType.update({ where: { id }, data });
+  revalidatePath("/config");
+  revalidatePath("/readings");
+  revalidatePath("/invoice");
+}
+
+export async function deleteFeeType(id: string) {
+  await prisma.feeType.delete({ where: { id } });
+  revalidatePath("/config");
+  revalidatePath("/readings");
+  revalidatePath("/invoice");
 }
 
 export async function saveConfig(input: {

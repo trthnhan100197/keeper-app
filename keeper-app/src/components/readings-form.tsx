@@ -29,6 +29,7 @@ export function ReadingsForm({
   initialWaterNew,
   waterUnitPrice,
   initialUseTiers,
+  feeInputs,
 }: {
   roomId: string;
   month: number;
@@ -39,12 +40,14 @@ export function ReadingsForm({
   initialWaterNew: number;
   waterUnitPrice: number;
   initialUseTiers: boolean;
+  feeInputs: { feeTypeId: string; name: string; amount: number }[];
 }) {
   const [oldElec, setOldElec] = useState(initialElecOld);
   const [newElec, setNewElec] = useState(initialElecNew);
   const [oldWater, setOldWater] = useState(initialWaterOld);
   const [newWater, setNewWater] = useState(initialWaterNew);
   const [useTiers, setUseTiers] = useState(initialUseTiers);
+  const [fees, setFees] = useState(() => Object.fromEntries(feeInputs.map((f) => [f.feeTypeId, f.amount])));
   const [savedFlash, setSavedFlash] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -63,6 +66,7 @@ export function ReadingsForm({
         waterNew: newWater,
         waterUnitPrice,
         useTiers,
+        fees: Object.entries(fees).map(([feeTypeId, amount]) => ({ feeTypeId, amount })),
       });
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 1400);
@@ -130,6 +134,26 @@ export function ReadingsForm({
           <ConsumptionRow text={`${waterConsumption} m³`} />
         </div>
       </div>
+
+      {feeInputs.length > 0 && (
+        <div style={{ ...cardStyle, marginTop: 20 }}>
+          <div style={{ font: "600 12.5px -apple-system,sans-serif", marginBottom: 12 }}>Chi phí khác</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {feeInputs.map((f) => (
+              <div key={f.feeTypeId} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ flex: 1, font: "500 12px -apple-system,sans-serif", color: "var(--sub)" }}>{f.name}</div>
+                <input
+                  type="number"
+                  value={fees[f.feeTypeId] ?? 0}
+                  onChange={(e) => setFees((prev) => ({ ...prev, [f.feeTypeId]: Number(e.target.value) || 0 }))}
+                  style={{ ...inputStyle, width: 140 }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
         <div
           onClick={onSave}

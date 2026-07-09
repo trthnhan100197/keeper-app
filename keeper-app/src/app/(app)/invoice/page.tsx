@@ -111,7 +111,14 @@ function InvoiceBody({
   room: { id: string; no: string; monthlyRent: number; tenantName: string | null; tenantPhone: string | null };
   propertyName: string;
   activeMonthText: string;
-  reading: { electricOld: number; electricNew: number; waterOld: number; waterNew: number; useTiers: boolean };
+  reading: {
+    electricOld: number;
+    electricNew: number;
+    waterOld: number;
+    waterNew: number;
+    useTiers: boolean;
+    fees: { id: string; amount: unknown; feeType: { id: string; name: string } }[];
+  };
   config: NonNullable<Awaited<ReturnType<typeof getActiveBillingConfig>>>;
 }) {
   const elecConsumption = Math.max(0, reading.electricNew - reading.electricOld);
@@ -130,7 +137,9 @@ function InvoiceBody({
   });
   const waterUnitPrice = Number(config.defaultWaterPrice);
   const waterTotal = calculateWaterBill(waterConsumption, waterUnitPrice);
-  const grandTotal = elecResult.total + waterTotal;
+  const fees = reading.fees.map((f) => ({ name: f.feeType.name, amount: Number(f.amount) }));
+  const feesTotal = fees.reduce((sum, f) => sum + f.amount, 0);
+  const grandTotal = elecResult.total + waterTotal + room.monthlyRent + feesTotal;
 
   return (
     <div>
@@ -241,6 +250,35 @@ function InvoiceBody({
         </div>
       )}
 
+      <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 14 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            padding: "12px 14px",
+            font: "600 12.5px -apple-system,sans-serif",
+          }}
+        >
+          <div style={{ flex: 1 }}>Tiền phòng</div>
+          <div style={{ font: "700 12.5px ui-monospace,monospace" }}>{vnd(room.monthlyRent)}</div>
+        </div>
+        {fees.map((f, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "12px 14px",
+              borderTop: "1px solid var(--border)",
+              font: "600 12.5px -apple-system,sans-serif",
+            }}
+          >
+            <div style={{ flex: 1 }}>{f.name}</div>
+            <div style={{ font: "700 12.5px ui-monospace,monospace" }}>{vnd(f.amount)}</div>
+          </div>
+        ))}
+      </div>
+
       <div
         className="invoice-total"
         style={{
@@ -266,9 +304,10 @@ function InvoiceBody({
         electricNew={reading.electricNew}
         waterOld={reading.waterOld}
         waterNew={reading.waterNew}
-        elecWaterTotalText={vnd(grandTotal)}
+        elecWaterTotalText={vnd(elecResult.total + waterTotal)}
         monthlyRent={room.monthlyRent}
-        grandTotalText={vnd(grandTotal + room.monthlyRent)}
+        fees={fees}
+        grandTotalText={vnd(grandTotal)}
       />
     </div>
   );
