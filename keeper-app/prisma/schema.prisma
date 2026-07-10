@@ -63,9 +63,29 @@ model MeterReading {
   billingConfig   BillingConfig? @relation(fields: [billingConfigId], references: [id])
   fees            Fee[]
   note            String?
+  source          ReadingSource @default(MANUAL) // nguồn nhập liệu: nhập tay / ảnh / giọng nói / API ngoài
+  rawImageUrl     String?       // ảnh gốc, có nếu source = PHOTO
+  needsReview     Boolean       @default(false) // true nếu AI đọc chưa chắc chắn, cần người duyệt lại
   createdAt       DateTime      @default(now())
 
   @@unique([roomId, month, year]) // mỗi phòng chỉ có 1 bản ghi/tháng
+}
+
+enum ReadingSource {
+  MANUAL // nhập tay qua form
+  PHOTO  // đọc từ ảnh chụp đồng hồ
+  VOICE  // đọc từ ghi âm
+  API    // gửi từ hệ thống ngoài (đồng hồ IoT, phần mềm khác)
+}
+
+// API key cho phép hệ thống ngoài (đồng hồ IoT, phần mềm khác) gửi chỉ số vào hệ thống
+model ApiKey {
+  id         String    @id @default(cuid())
+  key        String    @unique
+  name       String    // tên gợi nhớ, vd "Đồng hồ IoT nhà A"
+  active     Boolean   @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
 }
 
 // Loại chi phí tự định nghĩa (phí quản lý, mạng, rác...) - không cố định trong code,

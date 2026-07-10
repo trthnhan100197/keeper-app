@@ -49,6 +49,10 @@ export async function getMostRecentReading(roomId: string) {
   });
 }
 
+export async function getApiKeys() {
+  return prisma.apiKey.findMany({ orderBy: { createdAt: "desc" } });
+}
+
 export async function getActiveBillingConfig() {
   return prisma.billingConfig.findFirst({
     where: { isActive: true },

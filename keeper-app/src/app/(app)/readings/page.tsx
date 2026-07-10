@@ -2,6 +2,9 @@ import { getRoomOptions, getReadingForRoomPeriod, getMostRecentReading, getActiv
 import { currentPeriod } from "@/lib/nav";
 import { RoomSelect } from "@/components/room-select";
 import { ReadingsForm } from "@/components/readings-form";
+import { PhotoReadingCapture } from "@/components/photo-reading-capture";
+import { VoiceReadingCapture } from "@/components/voice-reading-capture";
+import { ReadingsTabs } from "@/components/readings-tabs";
 
 export default async function ReadingsPage({
   searchParams,
@@ -38,27 +41,60 @@ export default async function ReadingsPage({
     amount: existingFees.get(ft.id) ?? Number(ft.defaultAmount),
   }));
 
+  const roomOptions = options.map((o) => ({ id: o.id, no: o.no, propertyName: o.propertyName }));
+  const periodBadge = (
+    <div
+      style={{
+        display: "inline-block",
+        padding: "9px 14px",
+        border: "1px solid var(--border)",
+        borderRadius: 8,
+        font: "600 12.5px -apple-system,sans-serif",
+        color: "var(--sub)",
+      }}
+    >
+      {activeMonthText}
+    </div>
+  );
+
   return (
     <div>
       <div style={{ font: "700 20px/1.2 -apple-system,sans-serif", marginBottom: 14 }}>Nhập chỉ số</div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        <RoomSelect options={options} current={currentRoomId} />
-        <div style={{ padding: "9px 14px", border: "1px solid var(--border)", borderRadius: 8, font: "600 12.5px -apple-system,sans-serif", color: "var(--sub)" }}>
-          {activeMonthText}
-        </div>
-      </div>
-      <ReadingsForm
-        key={`${currentRoomId}-${month}-${year}`}
-        roomId={currentRoomId}
-        month={month}
-        year={year}
-        initialElecOld={initialElecOld}
-        initialElecNew={initialElecNew}
-        initialWaterOld={initialWaterOld}
-        initialWaterNew={initialWaterNew}
-        waterUnitPrice={waterUnitPrice}
-        initialUseTiers={initialUseTiers}
-        feeInputs={feeInputs}
+      <ReadingsTabs
+        singleTab={
+          <div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+              <RoomSelect options={options} current={currentRoomId} />
+              {periodBadge}
+            </div>
+            <ReadingsForm
+              key={`${currentRoomId}-${month}-${year}`}
+              roomId={currentRoomId}
+              month={month}
+              year={year}
+              initialElecOld={initialElecOld}
+              initialElecNew={initialElecNew}
+              initialWaterOld={initialWaterOld}
+              initialWaterNew={initialWaterNew}
+              waterUnitPrice={waterUnitPrice}
+              initialUseTiers={initialUseTiers}
+              feeInputs={feeInputs}
+            />
+          </div>
+        }
+        batchTab={
+          <div>
+            <div style={{ marginBottom: 16 }}>{periodBadge}</div>
+            <div className="flex flex-col min-[900px]:flex-row" style={{ gap: 16, alignItems: "flex-start" }}>
+              <div style={{ flex: 1, minWidth: 0, width: "100%" }}>
+                <PhotoReadingCapture rooms={roomOptions} month={month} year={year} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0, width: "100%" }}>
+                <VoiceReadingCapture rooms={roomOptions} month={month} year={year} />
+              </div>
+            </div>
+          </div>
+        }
       />
     </div>
   );

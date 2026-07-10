@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveConfig, addFeeType, deleteFeeType } from "@/app/(app)/actions";
+import { saveConfig } from "@/app/(app)/actions";
 
 type Tier = { id: string; tierOrder: number; fromKwh: number; toKwh: number | null; unitPrice: number };
 type FeeType = { id: string; name: string; defaultAmount: number };
@@ -40,32 +40,120 @@ export function ConfigForm({
 }) {
   const [configTab, setConfigTab] = useState<"tiered" | "flat">("tiered");
   const [applyScope, setApplyScope] = useState<"current" | "next">("current");
-  const [tierPrices, setTierPrices] = useState(Object.fromEntries(tiers.map((t) => [t.id, t.unitPrice])));
+  const [tierDrafts, setTierDrafts] = useState<Tier[]>(tiers);
+  const [deletedTierIds, setDeletedTierIds] = useState<string[]>([]);
   const [flatPrice, setFlatPrice] = useState(flatUnitPrice);
   const [waterPrice, setWaterPrice] = useState(defaultWaterPrice);
-  const [feeTypeEdits, setFeeTypeEdits] = useState<Record<string, { name?: string; defaultAmount?: number }>>({});
+  const [feeTypeDrafts, setFeeTypeDrafts] = useState<FeeType[]>(feeTypes);
+  const [deletedFeeTypeIds, setDeletedFeeTypeIds] = useState<string[]>([]);
   const [savedFlash, setSavedFlash] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  function feeTypeValue(ft: FeeType) {
-    return {
-      name: feeTypeEdits[ft.id]?.name ?? ft.name,
-      defaultAmount: feeTypeEdits[ft.id]?.defaultAmount ?? ft.defaultAmount,
-    };
+  const lastTierId = tierDrafts[tierDrafts.length - 1]?.id;
+
+  // Validate cả trong 1 bậc (Đến >= Từ) lẫn giữa các bậc liên tiếp (Từ bậc sau phải nối đúng ngay
+  // sau Đến bậc trước — không được chồng lấn hoặc có khoảng trống, nếu không tiền điện sẽ tính sai
+  // vì calculateElectricityBill duyệt tuần tự theo bậc và trừ dần kWh còn lại).
+  const tierErrors = new Map<string, string>();
+  const sortedTierDrafts = [...tierDrafts].sort((a, b) => a.tierOrder - b.tierOrder);
+  sortedTierDrafts.forEach((t, i) => {
+    if (t.toKwh != null && t.toKwh < t.fromKwh) {
+      tierErrors.set(t.id, `"Đến" (${t.toKwh}) không được nhỏ hơn "Từ" (${t.fromKwh})`);
+      return;
+    }
+    if (i < sortedTierDrafts.length - 1 && t.toKwh == null) {
+      tierErrors.set(t.id, `Chỉ bậc cuối cùng mới được để "Đến" trống (không giới hạn)`);
+      return;
+    }
+    if (i > 0) {
+      const prev = sortedTierDrafts[i - 1];
+      if (prev.toKwh != null && t.fromKwh !== prev.toKwh + 1) {
+        tierErrors.set(
+          t.id,
+          `"Từ" (${t.fromKwh}) phải nối tiếp ngay sau bậc ${prev.tierOrder} (đến ${prev.toKwh}) — phải là ${prev.toKwh + 1}`
+        );
+      }
+    }
+  });
+  const hasTierError = tierErrors.size > 0;
+
+  function updateTierDraft(id: string, patch: Partial<Tier>) {
+    setTierDrafts((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }
+
+  function addTierDraft() {
+    setTierDrafts((prev) => {
+      const last = prev[prev.length - 1];
+      if (!last) {
+        return [{ id: `new-${Date.now()}`, tierOrder: 1, fromKwh: 0, toKwh: null, unitPrice: 0 }];
+      }
+      // Nếu bậc cuối đã có "Đến" (người dùng tự nhập) thì tôn trọng đúng giá trị đó — bậc mới nối
+      // tiếp ngay sau, không ghi đè. Chỉ khi bậc cuối còn "không giới hạn" (chưa từng chỉnh) mới
+      // tự đặt mốc +100 làm gợi ý mặc định, vì không phải bậc nào cũng cách nhau 100kWh.
+      const hasExplicitBoundary = last.toKwh != null;
+      const newFromKwh = hasExplicitBoundary ? last.toKwh! + 1 : last.fromKwh + 100;
+      const updatedLast = hasExplicitBoundary ? last : { ...last, toKwh: newFromKwh - 1 };
+      return [
+        ...prev.map((t) => (t.id === last.id ? updatedLast : t)),
+        {
+          id: `new-${Date.now()}`,
+          tierOrder: last.tierOrder + 1,
+          fromKwh: newFromKwh,
+          toKwh: null,
+          unitPrice: last.unitPrice,
+        },
+      ];
+    });
+  }
+
+  function deleteTierDraft(id: string) {
+    setTierDrafts((prev) => {
+      if (prev.length <= 1) return prev; // luôn giữ tối thiểu 1 bậc
+      if (prev[prev.length - 1].id !== id) return prev; // chỉ cho xóa bậc cuối
+      if (!id.startsWith("new-")) setDeletedTierIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
+      const rest = prev.slice(0, -1);
+      const newLast = rest[rest.length - 1];
+      if (newLast) rest[rest.length - 1] = { ...newLast, toKwh: null };
+      return rest;
+    });
+  }
+
+  function updateFeeTypeDraft(id: string, patch: Partial<FeeType>) {
+    setFeeTypeDrafts((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+  }
+
+  function addFeeTypeDraft() {
+    setFeeTypeDrafts((prev) => [...prev, { id: `new-${Date.now()}`, name: "Phí mới", defaultAmount: 0 }]);
+  }
+
+  function deleteFeeTypeDraft(id: string) {
+    if (!id.startsWith("new-")) setDeletedFeeTypeIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
+    setFeeTypeDrafts((prev) => prev.filter((f) => f.id !== id));
   }
 
   function onSave() {
+    if (hasTierError) return;
+    setSaveError(null);
     startTransition(async () => {
-      await saveConfig({
-        configId,
-        useTiers,
-        flatUnitPrice: flatPrice,
-        defaultWaterPrice: waterPrice,
-        tiers: tiers.map((t) => ({ id: t.id, unitPrice: tierPrices[t.id] })),
-        feeTypes: feeTypes.map((ft) => ({ id: ft.id, ...feeTypeValue(ft) })),
-      });
-      setSavedFlash(true);
-      setTimeout(() => setSavedFlash(false), 1400);
+      try {
+        await saveConfig({
+          configId,
+          useTiers,
+          flatUnitPrice: flatPrice,
+          defaultWaterPrice: waterPrice,
+          tiers: tierDrafts,
+          deletedTierIds,
+          feeTypes: feeTypeDrafts,
+          deletedFeeTypeIds,
+        });
+        setDeletedTierIds([]);
+        setDeletedFeeTypeIds([]);
+        setSavedFlash(true);
+        setTimeout(() => setSavedFlash(false), 1400);
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : "Lưu thất bại, vui lòng thử lại.");
+      }
     });
   }
 
@@ -73,7 +161,8 @@ export function ConfigForm({
     <div>
       <div style={{ font: "700 20px/1.2 -apple-system,sans-serif", marginBottom: 2 }}>Cấu hình giá điện nước</div>
       <div style={{ font: "400 12px -apple-system,sans-serif", color: "var(--sub)", marginBottom: 16 }}>
-        Áp dụng ngay cho chỉ số và hóa đơn
+        Chỉnh xong nhớ bấm &quot;Lưu thay đổi&quot; ở cuối trang — mọi thay đổi bên dưới chưa được ghi lại cho tới
+        lúc đó.
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
@@ -124,34 +213,116 @@ export function ConfigForm({
               <div style={{ flex: 1 }}>Từ (kWh)</div>
               <div style={{ flex: 1 }}>Đến (kWh)</div>
               <div style={{ width: 150 }}>Đơn giá (đ/kWh)</div>
+              <div style={{ width: 28 }} />
             </div>
-            {tiers.map((t) => (
-              <div
-                key={t.id}
-                style={{ display: "flex", alignItems: "center", padding: "9px 14px", borderTop: "1px solid var(--border)", font: "600 12.5px -apple-system,sans-serif" }}
-              >
-                <div style={{ width: 60 }}>{t.tierOrder}</div>
-                <div style={{ flex: 1, font: "600 12px ui-monospace,monospace" }}>{t.fromKwh}</div>
-                <div style={{ flex: 1, font: "600 12px ui-monospace,monospace" }}>{t.toKwh ?? "—"}</div>
-                <input
-                  type="number"
-                  value={tierPrices[t.id]}
-                  onChange={(e) => setTierPrices((prev) => ({ ...prev, [t.id]: Number(e.target.value) || 0 }))}
-                  style={{
-                    width: 150,
-                    border: "1px solid var(--border)",
-                    borderRadius: 7,
-                    padding: "6px 10px",
-                    font: "600 12px ui-monospace,monospace",
-                    background: "var(--bg)",
-                    color: "var(--text)",
-                  }}
-                />
-              </div>
-            ))}
+            {tierDrafts.map((t) => {
+              const error = tierErrors.get(t.id) ?? null;
+              return (
+                <div key={t.id} style={{ borderTop: "1px solid var(--border)" }}>
+                  <div
+                    className="flex flex-wrap min-[640px]:flex-nowrap"
+                    style={{ alignItems: "center", gap: 8, padding: "9px 14px" }}
+                  >
+                    <div style={{ width: 60, font: "600 12.5px -apple-system,sans-serif" }}>{t.tierOrder}</div>
+                    <input
+                      type="number"
+                      value={t.fromKwh}
+                      onChange={(e) => updateTierDraft(t.id, { fromKwh: Number(e.target.value) || 0 })}
+                      style={{
+                        flex: 1,
+                        minWidth: 80,
+                        border: error ? "1px solid #e5484d" : "1px solid var(--border)",
+                        borderRadius: 7,
+                        padding: "6px 10px",
+                        font: "600 12px ui-monospace,monospace",
+                        background: "var(--bg)",
+                        color: "var(--text)",
+                      }}
+                    />
+                    <input
+                      type="number"
+                      value={t.toKwh ?? ""}
+                      placeholder="Không giới hạn"
+                      onChange={(e) =>
+                        updateTierDraft(t.id, { toKwh: e.target.value === "" ? null : Number(e.target.value) || 0 })
+                      }
+                      style={{
+                        flex: 1,
+                        minWidth: 100,
+                        border: error ? "1px solid #e5484d" : "1px solid var(--border)",
+                        borderRadius: 7,
+                        padding: "6px 10px",
+                        font: "600 12px ui-monospace,monospace",
+                        background: "var(--bg)",
+                        color: "var(--text)",
+                      }}
+                    />
+                    <input
+                      type="number"
+                      value={t.unitPrice}
+                      onChange={(e) => updateTierDraft(t.id, { unitPrice: Number(e.target.value) || 0 })}
+                      style={{
+                        width: 150,
+                        border: "1px solid var(--border)",
+                        borderRadius: 7,
+                        padding: "6px 10px",
+                        font: "600 12px ui-monospace,monospace",
+                        background: "var(--bg)",
+                        color: "var(--text)",
+                      }}
+                    />
+                    {t.id === lastTierId && tierDrafts.length > 1 ? (
+                      <div
+                        onClick={() => deleteTierDraft(t.id)}
+                        style={{
+                          width: 28,
+                          height: 28,
+                          flex: "none",
+                          borderRadius: 7,
+                          border: "1px solid var(--border)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          color: "var(--sub)",
+                          font: "600 15px -apple-system,sans-serif",
+                        }}
+                      >
+                        ×
+                      </div>
+                    ) : (
+                      <div style={{ width: 28, flex: "none" }} />
+                    )}
+                  </div>
+                  {error && (
+                    <div style={{ padding: "0 14px 9px", font: "500 11px -apple-system,sans-serif", color: "#e5484d" }}>
+                      {error}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          <div style={{ marginTop: 16 }}>
-            <div style={{ font: "500 12px -apple-system,sans-serif", color: "var(--sub)" }}>+ Thêm bậc</div>
+          <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div
+              onClick={addTierDraft}
+              style={{
+                display: "inline-block",
+                padding: "9px 16px",
+                borderRadius: 8,
+                border: "1px dashed var(--sub)",
+                font: "500 12px -apple-system,sans-serif",
+                color: "var(--sub)",
+                cursor: "pointer",
+              }}
+            >
+              + Thêm bậc
+            </div>
+            {hasTierError && (
+              <div style={{ font: "500 12px -apple-system,sans-serif", color: "#e5484d" }}>
+                Sửa lỗi ở bảng bậc thang phía trên trước khi lưu.
+              </div>
+            )}
           </div>
         </div>
       ) : (
@@ -224,12 +395,12 @@ export function ConfigForm({
             <div style={{ width: 150 }}>Giá gợi ý (đ)</div>
             <div style={{ width: 28 }} />
           </div>
-          {feeTypes.length === 0 && (
+          {feeTypeDrafts.length === 0 && (
             <div style={{ padding: "12px 14px", font: "500 12px -apple-system,sans-serif", color: "var(--sub)" }}>
               Chưa có khoản phí nào.
             </div>
           )}
-          {feeTypes.map((ft) => (
+          {feeTypeDrafts.map((ft) => (
             <div
               key={ft.id}
               style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", borderTop: "1px solid var(--border)" }}
@@ -237,10 +408,8 @@ export function ConfigForm({
               <div style={{ flex: 1 }}>
                 <input
                   type="text"
-                  value={feeTypeValue(ft).name}
-                  onChange={(e) =>
-                    setFeeTypeEdits((prev) => ({ ...prev, [ft.id]: { ...prev[ft.id], name: e.target.value } }))
-                  }
+                  value={ft.name}
+                  onChange={(e) => updateFeeTypeDraft(ft.id, { name: e.target.value })}
                   style={{
                     width: "100%",
                     border: "1px solid var(--border)",
@@ -255,13 +424,8 @@ export function ConfigForm({
               <div style={{ width: 150 }}>
                 <input
                   type="number"
-                  value={feeTypeValue(ft).defaultAmount}
-                  onChange={(e) =>
-                    setFeeTypeEdits((prev) => ({
-                      ...prev,
-                      [ft.id]: { ...prev[ft.id], defaultAmount: Number(e.target.value) || 0 },
-                    }))
-                  }
+                  value={ft.defaultAmount}
+                  onChange={(e) => updateFeeTypeDraft(ft.id, { defaultAmount: Number(e.target.value) || 0 })}
                   style={{
                     width: "100%",
                     border: "1px solid var(--border)",
@@ -274,7 +438,7 @@ export function ConfigForm({
                 />
               </div>
               <div
-                onClick={() => startTransition(() => deleteFeeType(ft.id))}
+                onClick={() => deleteFeeTypeDraft(ft.id)}
                 style={{
                   width: 28,
                   height: 28,
@@ -296,7 +460,7 @@ export function ConfigForm({
         </div>
         <div style={{ marginTop: 14 }}>
           <div
-            onClick={() => startTransition(() => addFeeType("Phí mới", 0))}
+            onClick={addFeeTypeDraft}
             style={{
               display: "inline-block",
               padding: "9px 16px",
@@ -312,16 +476,19 @@ export function ConfigForm({
         </div>
       </div>
 
-      <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end" }}>
+      <div style={{ marginTop: 24, display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 12 }}>
+        {saveError && (
+          <div style={{ font: "500 12px -apple-system,sans-serif", color: "#e5484d" }}>{saveError}</div>
+        )}
         <div
           onClick={onSave}
           style={{
             padding: "11px 22px",
             borderRadius: 8,
-            background: "var(--accent)",
-            color: "var(--accent-c)",
+            background: hasTierError ? "var(--surface)" : "var(--accent)",
+            color: hasTierError ? "var(--sub)" : "var(--accent-c)",
             font: "600 13px -apple-system,sans-serif",
-            cursor: "pointer",
+            cursor: hasTierError ? "not-allowed" : "pointer",
             opacity: isPending ? 0.6 : 1,
           }}
         >
