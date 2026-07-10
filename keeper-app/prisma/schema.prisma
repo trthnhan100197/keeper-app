@@ -1,0 +1,138 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Property {
+  id        String   @id @default(cuid())
+  name      String   // Tên trụ sở/nhà
+  address   String   // Địa chỉ
+  rooms     Room[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Room {
+  id          String          @id @default(cuid())
+  property    Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  propertyId  String
+  name        String          // Số phòng / tên phòng
+  monthlyRent Decimal         @db.Decimal(12, 0) // Giá thuê phòng / tháng
+  status      RoomStatus      @default(VACANT)
+  tenants     Tenant[]
+  readings    MeterReading[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+enum RoomStatus {
+  VACANT     // Trống
+  OCCUPIED   // Đang thuê
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId    String
+  name      String
+  phone     String?
+  moveInAt  DateTime?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model MeterReading {
+  id              String        @id @default(cuid())
+  room            Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId          String
+  month           Int           // 1-12
+  year            Int
+  electricOld     Int           // Số điện cũ
+  electricNew     Int           // Số điện mới
+  waterOld        Int           // Số nước cũ
+  waterNew        Int           // Số nước mới
+  waterUnitPrice  Decimal       @db.Decimal(12, 0) // Đơn giá nước (đ/khối) áp dụng cho kỳ này
+  useTiers        Boolean       @default(true) // true = tính điện theo bậc thang nhà nước cho kỳ này, false = giá cố định
+  billingConfigId String?       // Cấu hình giá điện áp dụng cho kỳ này (optional override)
+  billingConfig   BillingConfig? @relation(fields: [billingConfigId], references: [id])
+  fees            Fee[]
+  note            String?
+  source          ReadingSource @default(MANUAL) // nguồn nhập liệu: nhập tay / ảnh / giọng nói / API ngoài
+  rawImageUrl     String?       // ảnh gốc, có nếu source = PHOTO
+  needsReview     Boolean       @default(false) // true nếu AI đọc chưa chắc chắn, cần người duyệt lại
+  createdAt       DateTime      @default(now())
+
+  @@unique([roomId, month, year]) // mỗi phòng chỉ có 1 bản ghi/tháng
+}
+
+enum ReadingSource {
+  MANUAL // nhập tay qua form
+  PHOTO  // đọc từ ảnh chụp đồng hồ
+  VOICE  // đọc từ ghi âm
+  API    // gửi từ hệ thống ngoài (đồng hồ IoT, phần mềm khác)
+}
+
+// API key cho phép hệ thống ngoài (đồng hồ IoT, phần mềm khác) gửi chỉ số vào hệ thống
+model ApiKey {
+  id         String    @id @default(cuid())
+  key        String    @unique
+  name       String    // tên gợi nhớ, vd "Đồng hồ IoT nhà A"
+  active     Boolean   @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+// Loại chi phí tự định nghĩa (phí quản lý, mạng, rác...) - không cố định trong code,
+// người quản lý tự thêm/sửa/xoá.
+model FeeType {
+  id            String   @id @default(cuid())
+  name          String   // vd: "Phí quản lý", "Phí Internet", "Phí rác"
+  defaultAmount Decimal  @db.Decimal(12, 0) @default(0) // gợi ý khi thêm cho 1 phòng/tháng
+  createdAt     DateTime @default(now())
+  fees          Fee[]
+}
+
+// Số tiền thực tế của 1 loại chi phí cho 1 phòng/tháng cụ thể
+model Fee {
+  id             String       @id @default(cuid())
+  meterReading   MeterReading @relation(fields: [meterReadingId], references: [id], onDelete: Cascade)
+  meterReadingId String
+  feeType        FeeType      @relation(fields: [feeTypeId], references: [id], onDelete: Cascade)
+  feeTypeId      String
+  amount         Decimal      @db.Decimal(12, 0)
+
+  @@unique([meterReadingId, feeTypeId])
+}
+
+// Cấu hình giá điện - cho phép bật/tắt tính theo bậc thang nhà nước
+// và cập nhật lại khi luật thay đổi, không cần sửa code.
+model BillingConfig {
+  id            String         @id @default(cuid())
+  name          String         // vd: "Bậc thang 2026 (QĐ 14/2025)"
+  useTiers      Boolean        @default(false) // giá trị mặc định gợi ý khi tạo chỉ số mới; quyết định thực tế lưu theo từng MeterReading.useTiers
+  flatUnitPrice Decimal?       @db.Decimal(12, 0) // đơn giá cố định (đ/kWh), dùng khi useTiers = false
+  defaultWaterPrice Decimal    @db.Decimal(12, 0) @default(0) // đ/m3 mặc định, dùng để gợi ý khi tạo chỉ số mới (giá thực tế chốt theo từng kỳ ở MeterReading.waterUnitPrice)
+  vatPercent    Decimal        @db.Decimal(5, 2) @default(8.00)
+  isActive      Boolean        @default(false) // chỉ 1 config active tại 1 thời điểm
+  tiers         ElectricTier[]
+  readings      MeterReading[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// Từng bậc trong biểu giá lũy tiến
+model ElectricTier {
+  id              String        @id @default(cuid())
+  billingConfig   BillingConfig @relation(fields: [billingConfigId], references: [id], onDelete: Cascade)
+  billingConfigId String
+  tierOrder       Int           // thứ tự bậc: 1, 2, 3...
+  fromKwh         Int           // từ (kWh)
+  toKwh           Int?          // đến (kWh), null = không giới hạn (bậc cao nhất)
+  unitPrice       Decimal       @db.Decimal(12, 0) // đ/kWh, chưa VAT
+}
